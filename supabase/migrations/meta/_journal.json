@@ -8,6 +8,13 @@
       "when": 1700994018483,
       "tag": "0000_rich_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1700994018484,
+      "tag": "0001_drop_todos",
+      "breakpoints": true
     }
   ]
 }

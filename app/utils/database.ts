@@ -3,7 +3,7 @@ import { ExtractTablesWithRelations, sql } from "drizzle-orm";
 import postgres from "postgres";
 import { PgTransaction } from "drizzle-orm/pg-core";
 
-const connectionString = `postgresql://${process.env.SUPAVISOR_USER}.${process.env.SUPAVISOR_TENANT}:${process.env.SUPAVISOR_PASSWORD}@${process.env.SUPAVISOR_PORT}/postgres`;
+const connectionString = `postgresql://${process.env.DATABASE_USER}:${process.env.DATABASE_PASSWORD}@${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT}/${process.env.DATABASE_NAME}`;
 //Disable prefetch as it is not supported for "Transaction" pool mode
 const client = postgres(connectionString, { prepare: false });
 
