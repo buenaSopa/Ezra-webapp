@@ -30,7 +30,7 @@ export default function AuthButton() {
   return (
     <Button 
       variant="ghost" 
-      className="w-full justify-start text-destructive hover:text-destructive"
+      className="w-full justify-start text-destructive hover:text-destructive relative"
       onClick={handleSignOut}
       disabled={isLoading}
     >
