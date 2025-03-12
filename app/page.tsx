@@ -3,6 +3,7 @@ import { headers, cookies } from "next/headers";
 import { createClient } from "./utils/supabase/server";
 import { redirect } from "next/navigation";
 import { SubmitButton } from './components/SubmitButton';
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 
 export default async function Login({
   searchParams,
@@ -61,52 +62,65 @@ export default async function Login({
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
-      <div className="flex flex-col gap-4 mb-4">
-        <h1 className="text-2xl font-bold text-center">Welcome to Ezra</h1>
-        <p className="text-gray-500 text-center">
-          AI-powered marketing assistant for creative strategists
-        </p>
-      </div>
-
-      <form
-        className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
-        action={signIn}
-      >
-        <label className="text-md" htmlFor="email">
-          Email
-        </label>
-        <input
-          className="rounded-md px-4 py-2 bg-inherit border mb-6"
-          name="email"
-          placeholder="you@example.com"
-          required
-        />
-        <label className="text-md" htmlFor="password">
-          Password
-        </label>
-        <input
-          className="rounded-md px-4 py-2 bg-inherit border mb-6"
-          type="password"
-          name="password"
-          placeholder="••••••••"
-          required
-        />
-        <SubmitButton className="bg-green-700 rounded-md px-4 py-2 text-foreground mb-2">
-          Sign In
-        </SubmitButton>
-        <SubmitButton
-          formAction={signUp}
-          className="border border-foreground/20 rounded-md px-4 py-2 text-foreground mb-2"
-        >
-          Sign Up
-        </SubmitButton>
-        {searchParams?.message && (
-          <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-            {searchParams.message}
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold">Welcome to Ezra</h1>
+          <p className="text-gray-500">
+            AI-powered marketing assistant for creative strategists
           </p>
-        )}
-      </form>
+        </CardHeader>
+
+        <CardContent>
+          <form
+            className="flex flex-col gap-4"
+            action={signIn}
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="email">
+                Email
+              </label>
+              <input
+                className="w-full rounded-md px-4 py-2 bg-background border shadow-sm focus:ring-2 focus:ring-primary/20 outline-none transition"
+                name="email"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="password">
+                Password
+              </label>
+              <input
+                className="w-full rounded-md px-4 py-2 bg-background border shadow-sm focus:ring-2 focus:ring-primary/20 outline-none transition"
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <SubmitButton className="w-full bg-green-700 hover:bg-green-800 text-white rounded-md px-4 py-2 transition-colors">
+                Sign In
+              </SubmitButton>
+              <SubmitButton
+                formAction={signUp}
+                className="w-full border border-gray-300 hover:bg-gray-50 rounded-md px-4 py-2 transition-colors"
+              >
+                Sign Up
+              </SubmitButton>
+            </div>
+
+            {searchParams?.message && (
+              <p className="p-4 bg-foreground/10 text-foreground text-center text-sm rounded-md">
+                {searchParams.message}
+              </p>
+            )}
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
