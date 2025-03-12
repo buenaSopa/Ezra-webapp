@@ -18,7 +18,7 @@ import {
 
 export function Sidebar() {
   return (
-    <ShadcnSidebar className="w-[250px] border-r dark">
+    <ShadcnSidebar className="w-[250px] border-r">
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center gap-2">
           <SidebarTrigger>
