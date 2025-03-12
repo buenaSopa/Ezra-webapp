@@ -4,7 +4,8 @@
     "dev": "next dev -p 3300",
     "build": "next build",
     "start": "next start",
-    "sql": "drizzle-kit generate:pg",
+    "sql": "drizzle-kit generate",
+    "push": "drizzle-kit push",
     "drop": "drizzle-kit drop"
   },
   "dependencies": {

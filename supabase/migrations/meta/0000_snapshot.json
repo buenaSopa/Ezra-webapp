@@ -1,10 +1,8 @@
 {
-  "id": "bb6df903-6e55-4fed-ba81-828251fb74e4",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "profiles": {
+    "public.profiles": {
       "name": "profiles",
       "schema": "",
       "columns": {
@@ -48,14 +46,17 @@
       "uniqueConstraints": {
         "profiles_user_id_unique": {
           "name": "profiles_user_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "user_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "todos": {
+    "public.todos": {
       "name": "todos",
       "schema": "",
       "columns": {
@@ -105,19 +106,22 @@
         "todos_user_id_profiles_user_id_fk": {
           "name": "todos_user_id_profiles_user_id_fk",
           "tableFrom": "todos",
-          "tableTo": "profiles",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "profiles",
           "columnsTo": [
             "user_id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
@@ -126,5 +130,11 @@
     "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "bb6df903-6e55-4fed-ba81-828251fb74e4",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }
