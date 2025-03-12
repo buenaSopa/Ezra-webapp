@@ -6,6 +6,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarTrigger,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import AuthButton from "@/components/AuthButton";
 import { 
@@ -13,18 +14,22 @@ import {
   Settings, 
   HelpCircle,
   ChevronLeft,
-  Plus
+  Plus,
+  PanelLeftClose
 } from "lucide-react";
 
 export function Sidebar() {
   return (
     <ShadcnSidebar className="w-[250px] border-r">
+      <SidebarRail className="w-2 hover:bg-accent" />
       <SidebarHeader className="border-b p-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <Link href="/dashboard">
+            <span className="font-semibold cursor-pointer">Ezra</span>
+          </Link>
           <SidebarTrigger>
-            <ChevronLeft className="h-4 w-4" />
+            <PanelLeftClose className="h-4 w-4" />
           </SidebarTrigger>
-          <span className="font-semibold">Ezra</span>
         </div>
       </SidebarHeader>
       
