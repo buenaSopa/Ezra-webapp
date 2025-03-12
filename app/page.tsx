@@ -23,7 +23,7 @@ export default function Login({
       return redirect("/?message=Could not authenticate user");
     }
 
-    return redirect("/todo");
+    return redirect("/dashboard");
   };
 
   const signUp = async (formData: FormData) => {
