@@ -3,26 +3,23 @@
 ## **Tech Stack Overview**
 
 ### **Frontend:**
-- **Next.js (v15.2.2-canary.1)** – React framework for SSR/ISR
-- **React 19 (Experimental)** – UI component library
-- **TailwindCSS (v3.4.1)** – Utility-first CSS framework
-- **Framer Motion** – Animations
-- **Radix UI** – Accessible UI components
+- **Next.js (v14)** – React framework for SSR/ISR
+- **React 18** 
+- **TailwindCSS** – Utility-first CSS framework
+- **ShadCN/UI** – Component library for design consistency
 - **Lucide-react** – Icon library
-- **ShadCN/UI ** – Component library for design consistency
 
 ### **Backend:**
 - **Next.js API Routes/ server action** – Backend logic within Next.js
-- **PostgreSQL (via @vercel/postgres)** – Database for storing user sessions and AI outputs
+- **Supabase** – Database for storing user sessions and AI outputs
 - **Drizzle ORM** – TypeScript ORM for PostgreSQL
 - **Drizzle Kit** – Migrations and schema management
 - **Next Auth Authentication (DB Strategy)** – Store in the database for session management
+- **Apify casper11515/trustpilot-reviews-scraper** for scraping trustpilot review
 
 ### **AI & LLM Integration:**
-- **AI SDK (@ai-sdk/openai, @ai-sdk/fireworks)** – AI-driven processing
 - **LlamaIndex.ts** – Data indexing for LLM-powered search
 - **Qdrant** – Vector database for embeddings and context retention
-
 ---
 
 ## **Project Scope & Workflow**
@@ -55,9 +52,6 @@ Develop a tool for creative strategists to streamline research, ideation, and ad
   - Refine the script via GPT-based iteration
 - **Final Output:** A structured, polished ad script ready for production
 
----
-
-## **Necessary Pages & Schema Overview**
 
 ### **Pages:**
 1. **Dashboard** – Displays all products
