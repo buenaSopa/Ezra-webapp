@@ -1,5 +1,8 @@
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
+import dynamic from 'next/dynamic';
+
+const NextNProgressClient = dynamic(() => import('@/app/components/NextNProgressClient'), { ssr: false });
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -19,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={GeistSans.className}>
       <body className="bg-background text-foreground">
+        <NextNProgressClient />
         {children}
       </body>
     </html>
