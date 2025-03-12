@@ -8,7 +8,6 @@ const progress = new ProgressBar({
   size: 3,
   color: '#10B981',
   className: 'bar-of-progress',
-  delay: 100,
 });
 
 export default function NextNProgressClient() {
