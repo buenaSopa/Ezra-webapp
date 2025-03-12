@@ -14,9 +14,9 @@ import {
   Settings, 
   HelpCircle,
   ChevronLeft,
-  Plus,
   PanelLeftClose
 } from "lucide-react";
+import { AddProductIcon } from "./add-product-dialog";
 
 export function Sidebar() {
   return (
@@ -38,9 +38,7 @@ export function Sidebar() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold">Products</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
+              <AddProductIcon />
             </div>
             <div className="space-y-1">
               <Link href="/products/magic-soap" className="block">

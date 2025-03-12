@@ -8,9 +8,9 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-background w-full">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 flex items-center justify-center overflow-y-auto bg-background">
           {children}
         </main>
       </div>
