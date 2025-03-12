@@ -15,6 +15,13 @@
       "when": 1700994018484,
       "tag": "0001_drop_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1741773426667,
+      "tag": "0002_perfect_maddog",
+      "breakpoints": true
     }
   ]
 }
