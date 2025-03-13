@@ -1,3 +1,7 @@
+---
+description: commit message
+globs: 
+---
 
 ## Commit Messages
 - When you finish applying changes, the last line of the message should "Don't forget to commit!" and give me a commit command as well.
