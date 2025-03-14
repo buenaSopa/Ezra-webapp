@@ -23,6 +23,7 @@
     "autoprefixer": "10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "^0.33.0",
     "eslint": "^8.55.0",
     "eslint-plugin-drizzle": "^0.2.3",

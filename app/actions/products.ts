@@ -65,9 +65,10 @@ export async function createProduct({
         name,
         user_id: user.id,
         metadata: {
+          url,
           amazon_asin: amazonAsin,
           trustpilot_url: trustpilotUrl,
-          url: url // Store the URL in metadata as well for easier access
+          is_competitor: false
         }
       })
       .select()
@@ -96,9 +97,9 @@ export async function createProduct({
             name: competitor.name,
             user_id: user.id,
             metadata: {
+              url: competitor.url,
               amazon_asin: competitor.amazonAsin,
               trustpilot_url: competitor.trustpilotUrl,
-              url: competitor.url,
               is_competitor: true,
               competitor_for: productId
             }
