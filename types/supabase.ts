@@ -16,6 +16,7 @@ export interface Database {
           name: string
           description: string | null
           vector_db_index_id: string | null
+          metadata: Json | null
           created_at: string
           updated_at: string
         }
@@ -25,6 +26,7 @@ export interface Database {
           name: string
           description?: string | null
           vector_db_index_id?: string | null
+          metadata?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -34,6 +36,7 @@ export interface Database {
           name?: string
           description?: string | null
           vector_db_index_id?: string | null
+          metadata?: Json | null
           created_at?: string
           updated_at?: string
         }
