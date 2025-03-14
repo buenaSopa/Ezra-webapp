@@ -10,6 +10,8 @@ import { v4 as uuidv4 } from "uuid"
 type Competitor = {
   name: string
   url: string
+  amazonAsin?: string
+  trustpilotUrl?: string
 }
 
 type Resource = {
@@ -21,6 +23,8 @@ type Resource = {
 type CreateProductParams = {
   name: string
   url: string
+  amazonAsin?: string
+  trustpilotUrl?: string
   competitors: Competitor[]
   resources: Resource[]
 }
@@ -28,6 +32,8 @@ type CreateProductParams = {
 export async function createProduct({
   name,
   url,
+  amazonAsin,
+  trustpilotUrl,
   competitors,
   resources,
 }: CreateProductParams) {
@@ -48,6 +54,10 @@ export async function createProduct({
       .insert({
         name,
         user_id: user.id,
+        metadata: {
+          amazon_asin: amazonAsin,
+          trustpilot_url: trustpilotUrl
+        }
       })
       .select()
       .single()
@@ -68,6 +78,10 @@ export async function createProduct({
           .insert({
             name: competitor.name,
             user_id: user.id,
+            metadata: {
+              amazon_asin: competitor.amazonAsin,
+              trustpilot_url: competitor.trustpilotUrl
+            }
           })
           .select()
           .single()
