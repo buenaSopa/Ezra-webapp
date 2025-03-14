@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/app/utils/supabase/server"
 import { products, productToCompetitors, productMarketingResources } from "@/schema/products"
 import { v4 as uuidv4 } from "uuid"
 
@@ -49,7 +49,7 @@ export async function createProduct({
     }, null, 2));
     
     const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
     
     // Get the current user
     const { data: { user } } = await supabase.auth.getUser()
@@ -172,7 +172,7 @@ export async function uploadMarketingResourceFile(productId: string, resourceId:
     console.log(`Uploading file for product ${productId}, resource ${resourceId}:`, file.name);
     
     const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
     
     // Get the current user
     const { data: { user } } = await supabase.auth.getUser()
