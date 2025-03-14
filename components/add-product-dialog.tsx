@@ -24,6 +24,8 @@ import { v4 as uuidv4 } from "uuid"
 type Competitor = {
   name: string;
   url: string;
+  amazonAsin?: string;
+  trustpilotUrl?: string;
   files: File[];
 }
 
@@ -103,14 +105,20 @@ export function AddProductButton() {
       const formData = new FormData(e.currentTarget)
       const productName = formData.get("productName") as string
       const productUrl = formData.get("productUrl") as string
+      const productAmazonAsin = formData.get("productAmazonAsin") as string
+      const productTrustpilotUrl = formData.get("productTrustpilotUrl") as string
       
       // Prepare data for API call
       const productData = {
         name: productName,
         url: productUrl,
+        amazonAsin: productAmazonAsin || undefined,
+        trustpilotUrl: productTrustpilotUrl || undefined,
         competitors: competitors.filter(c => c.name && c.url).map(c => ({
           name: c.name,
-          url: c.url
+          url: c.url,
+          amazonAsin: c.amazonAsin,
+          trustpilotUrl: c.trustpilotUrl
         })),
         resources: resources.filter(r => r.title && (r.url || r.file)).map(r => ({
           type: r.type,
@@ -211,6 +219,33 @@ export function AddProductButton() {
               />
             </div>
             <div className="grid gap-2">
+              <label htmlFor="productAmazonAsin" className="text-sm font-medium">
+                Amazon ASIN (optional)
+              </label>
+              <Input
+                id="productAmazonAsin"
+                name="productAmazonAsin"
+                placeholder="B00EXAMPLE"
+              />
+              <p className="text-xs text-muted-foreground">
+                The Amazon Standard Identification Number for your product (e.g., B00EXAMPLE). Used to collect product-specific reviews.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="productTrustpilotUrl" className="text-sm font-medium">
+                Trustpilot URL (optional)
+              </label>
+              <Input
+                id="productTrustpilotUrl"
+                name="productTrustpilotUrl"
+                type="url"
+                placeholder="https://www.trustpilot.com/review/example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                URL to your company's Trustpilot page. Used to collect overall brand sentiment and reviews.
+              </p>
+            </div>
+            <div className="grid gap-2">
               <label className="text-sm font-medium">
                 Product Files
               </label>
@@ -298,6 +333,29 @@ export function AddProductButton() {
                       placeholder="https://competitor-website.com"
                       required
                     />
+                  </div>
+                  <div className="grid gap-1">
+                    <label className="text-sm">Amazon ASIN (optional)</label>
+                    <Input
+                      value={competitor.amazonAsin || ''}
+                      onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
+                      placeholder="B00EXAMPLE"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The Amazon Standard Identification Number for this competitor's product.
+                    </p>
+                  </div>
+                  <div className="grid gap-1">
+                    <label className="text-sm">Trustpilot URL (optional)</label>
+                    <Input
+                      type="url"
+                      value={competitor.trustpilotUrl || ''}
+                      onChange={(e) => handleCompetitorChange(index, 'trustpilotUrl', e.target.value)}
+                      placeholder="https://www.trustpilot.com/review/competitor.com"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL to the competitor's Trustpilot page.
+                    </p>
                   </div>
                   <div className="grid gap-1">
                     <label className="text-sm">Additional Files</label>
