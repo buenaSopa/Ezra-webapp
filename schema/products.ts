@@ -21,24 +21,6 @@ export const productToCompetitors = pgTable("product_to_competitors", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const productSources = pgTable("product_sources", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  productId: uuid("product_id").notNull().references(() => products.id),
-  sourceType: text("source_type").notNull(), // 'trustpilot', 'amazon', 'pdf', etc.
-  url: text("url"),
-  filePath: text("file_path"),
-  // Store reviews and their embeddings directly in JSON
-  reviews: jsonb("reviews").default([]).notNull(), // Array of review objects with content, rating, etc.
-  reviewVectorIds: jsonb("review_vector_ids").default([]).notNull(), // Array of vector DB IDs for each review
-  lastScrapedAt: timestamp("last_scraped_at"),
-  minimumScrapingInterval: integer("minimum_scraping_interval").default(24).notNull(), // minimum hours between scrapes
-  status: text("status").notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
-  errorDetails: text("error_details"),
-  metadata: jsonb("metadata"), // For any additional source-specific data
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 export const productMarketingResources = pgTable("product_marketing_resources", {
   id: uuid("id").defaultRandom().primaryKey(),
   productId: uuid("product_id").notNull().references(() => products.id),
