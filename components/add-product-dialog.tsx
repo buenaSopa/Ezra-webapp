@@ -209,14 +209,11 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     <form onSubmit={handleSubmit}>
       <DialogHeader>
         <DialogTitle>Add New Product</DialogTitle>
-        <DialogDescription>
-          Add a new product to analyze and create marketing content for.
-        </DialogDescription>
       </DialogHeader>
       
       {/* Main Product Section */}
       <div className="grid gap-4 py-4">
-        <h3 className="text-lg font-medium">Product Information</h3>
+        {/* <h3 className="text-lg font-medium">Product Information</h3> */}
         <div className="grid gap-2">
           <label htmlFor="productName" className="text-sm font-medium">
             Product Name
@@ -261,9 +258,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                 name="productAmazonAsin"
                 placeholder="B00EXAMPLE"
               />
-              <p className="text-xs text-muted-foreground">
-                The Amazon Standard Identification Number for your product (e.g., B00EXAMPLE). Used to collect product-specific reviews.
-              </p>
             </div>
             <div className="grid gap-2">
               <label htmlFor="productTrustpilotUrl" className="text-sm font-medium">
@@ -275,9 +269,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                 type="url"
                 placeholder="https://www.trustpilot.com/review/example.com"
               />
-              <p className="text-xs text-muted-foreground">
-                URL to your company's Trustpilot page. Used to collect overall brand sentiment and reviews.
-              </p>
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">
@@ -291,7 +282,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                   multiple
                   accept=".pdf,.doc,.docx,.txt,.csv"
                 />
-                <p className="text-sm text-muted-foreground">Upload any product-related files including reviews, documentation, etc.</p>
                 {productFiles.length > 0 && (
                   <div className="grid gap-2">
                     {productFiles.map((file, index) => (
@@ -333,21 +323,10 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         </div>
         <p className="text-sm text-muted-foreground">Add up to 5 competitors for comparison.</p>
         
-        <Collapsible open={isCompetitorsOpen} onOpenChange={setIsCompetitorsOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="flex w-full justify-between">
-              <span>{competitors.length > 0 ? `${competitors.length} Competitor${competitors.length > 1 ? 's' : ''} Added` : 'Show Competitors'}</span>
-              <ChevronDown className={cn(
-                "h-4 w-4 transition-transform duration-200",
-                isCompetitorsOpen && "transform rotate-180"
-              )} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-4">
-            {competitors.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">No competitors added yet.</p>
-            )}
-            
+        {competitors.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">No competitors added yet.</p>
+        ) : (
+          <div className="space-y-4">
             {competitors.map((competitor, index) => (
               <Card key={index} className="p-4">
                 <div className="flex justify-between items-start mb-2">
@@ -402,9 +381,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                           onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
                           placeholder="B00EXAMPLE"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          The Amazon Standard Identification Number for this competitor's product.
-                        </p>
                       </div>
                       <div className="grid gap-1">
                         <label className="text-sm">Trustpilot URL (optional)</label>
@@ -414,9 +390,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                           onChange={(e) => handleCompetitorChange(index, 'trustpilotUrl', e.target.value)}
                           placeholder="https://www.trustpilot.com/review/competitor.com"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          URL to the competitor's Trustpilot page.
-                        </p>
                       </div>
                       <div className="grid gap-1">
                         <label className="text-sm">Additional Files</label>
@@ -450,8 +423,8 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                 </div>
               </Card>
             ))}
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        )}
       </div>
       
       <Separator className="my-2" />
