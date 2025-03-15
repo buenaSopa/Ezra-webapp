@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { SubmitButton } from './components/SubmitButton';
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { createProfile, generateDefaultUsername } from "./actions/createProfile";
+import { GoogleSignInButton } from './components/GoogleSignInButton';
 
 export default async function Login({
   searchParams,
@@ -124,6 +125,19 @@ export default async function Login({
               >
                 Sign Up
               </SubmitButton>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-background text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              <GoogleSignInButton />
             </div>
 
             {searchParams?.message && (
