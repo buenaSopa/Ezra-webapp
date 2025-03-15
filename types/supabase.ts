@@ -64,56 +64,6 @@ export interface Database {
           created_at?: string
         }
       }
-      product_sources: {
-        Row: {
-          id: string
-          product_id: string
-          source_type: string
-          url: string | null
-          file_path: string | null
-          reviews: Json
-          review_vector_ids: Json
-          last_scraped_at: string | null
-          minimum_scraping_interval: number
-          status: string
-          error_details: string | null
-          metadata: Json | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          product_id: string
-          source_type: string
-          url?: string | null
-          file_path?: string | null
-          reviews?: Json
-          review_vector_ids?: Json
-          last_scraped_at?: string | null
-          minimum_scraping_interval?: number
-          status?: string
-          error_details?: string | null
-          metadata?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          product_id?: string
-          source_type?: string
-          url?: string | null
-          file_path?: string | null
-          reviews?: Json
-          review_vector_ids?: Json
-          last_scraped_at?: string | null
-          minimum_scraping_interval?: number
-          status?: string
-          error_details?: string | null
-          metadata?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
       product_marketing_resources: {
         Row: {
           id: string
