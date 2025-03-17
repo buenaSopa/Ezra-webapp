@@ -83,11 +83,13 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
 
   const handleProductFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
+    console.log('Product files added:', files.map(f => f.name))
     setProductFiles([...productFiles, ...files])
   }
 
   const handleCompetitorFileChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
+    console.log(`Competitor ${index} files added:`, files.map(f => f.name))
     const updatedCompetitors = [...competitors]
     updatedCompetitors[index].files = [...updatedCompetitors[index].files, ...files]
     setCompetitors(updatedCompetitors)
@@ -113,7 +115,16 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
 
   const handleResourceChange = (index: number, field: keyof Resource, value: any) => {
     const updatedResources = [...resources]
-    updatedResources[index][field] = value
+    updatedResources[index] = {
+      ...updatedResources[index],
+      [field]: value
+    }
+    
+    // Log when a file is added to a resource
+    if (field === 'file' && value) {
+      console.log(`Resource ${index} file added:`, value.name)
+    }
+    
     setResources(updatedResources)
   }
 
@@ -122,6 +133,16 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     newStates[index] = isOpen
     setCompetitorCollapsibleStates(newStates)
   }
+
+  // Helper function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -153,6 +174,16 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         }))
       }
 
+      console.log('Product files before submission:', productFiles.map(f => f.name))
+      console.log('Competitor files before submission:', competitors.map(c => ({ 
+        name: c.name, 
+        files: c.files.map(f => f.name) 
+      })))
+      console.log('Resource files before submission:', resources
+        .filter(r => r.file)
+        .map(r => ({ title: r.title, fileName: r.file?.name }))
+      )
+
       // Call the server action to create the product
       const result = await createProduct(productData)
       
@@ -169,16 +200,49 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         ...resources.filter(r => r.file).map(r => ({ file: r.file!, type: r.type, title: r.title }))
       ]
       
+      console.log(`All files to upload (${allFiles.length}):`, allFiles.map(f => ({ 
+        title: f.title, 
+        type: f.type, 
+        fileName: f.file.name,
+        fileSize: f.file.size,
+        fileType: f.file.type
+      })))
+      
       // Upload all files as resources
       if (allFiles.length > 0) {
         toast.info(`Uploading ${allFiles.length} files...`)
         
         for (const { file, type, title } of allFiles) {
+          console.log(`Starting upload for file: ${file.name}`)
           const resourceId = uuidv4()
-          await uploadMarketingResourceFile(result.productId!, resourceId, file)
+          try {
+            // Convert File to base64 string
+            const base64String = await fileToBase64(file);
+            console.log(`Converted file to base64 string (length: ${base64String.length})`);
+            
+            // Call the server action with file data instead of File object
+            const result2 = await uploadMarketingResourceFile(
+              result.productId!, 
+              resourceId, 
+              file.name,
+              file.type,
+              base64String
+            )
+            
+            console.log(`Upload result for ${file.name}:`, result2)
+            if (!result2.success) {
+              console.error(`Failed to upload file ${file.name}:`, result2.error)
+              toast.error(`Failed to upload ${file.name}: ${result2.error}`)
+            }
+          } catch (uploadError) {
+            console.error(`Error uploading file ${file.name}:`, uploadError)
+            toast.error(`Error uploading ${file.name}`)
+          }
         }
         
         toast.success(`${allFiles.length} files uploaded successfully`)
+      } else {
+        console.log('No files to upload')
       }
       
       toast.success("Product created successfully!")

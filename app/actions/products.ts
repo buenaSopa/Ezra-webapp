@@ -167,9 +167,16 @@ export async function createProduct({
 }
 
 // Function to handle file uploads for marketing resources
-export async function uploadMarketingResourceFile(productId: string, resourceId: string, file: File) {
+export async function uploadMarketingResourceFile(
+  productId: string, 
+  resourceId: string, 
+  fileName: string,
+  fileType: string,
+  fileBase64: string
+) {
   try {
-    console.log(`Uploading file for product ${productId}, resource ${resourceId}:`, file.name);
+    console.log(`Uploading file for product ${productId}, resource ${resourceId}:`, fileName);
+    console.log(`File type: ${fileType}`);
     
     const cookieStore = cookies()
     const supabase = createClient()
@@ -178,27 +185,36 @@ export async function uploadMarketingResourceFile(productId: string, resourceId:
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
+      console.error("User not authenticated for file upload");
       throw new Error("User not authenticated")
     }
     
     // Generate a unique file path
-    const fileExt = file.name.split('.').pop()
+    const fileExt = fileName.split('.').pop()
     const filePath = `${user.id}/${productId}/${resourceId}.${fileExt}`
     
     console.log(`File will be uploaded to path: ${filePath}`);
+    console.log(`Using storage bucket: marketing-resources`);
+    
+    // Convert base64 string to buffer
+    const base64Data = fileBase64.split(',')[1] || fileBase64;
+    const buffer = Buffer.from(base64Data, 'base64');
     
     // Upload the file to Supabase Storage
     const { error: uploadError } = await supabase
       .storage
       .from('marketing-resources')
-      .upload(filePath, file)
+      .upload(filePath, buffer, {
+        contentType: fileType
+      })
     
     if (uploadError) {
       console.error("Error uploading file:", uploadError);
+      console.error("Error details:", JSON.stringify(uploadError));
       throw new Error(`Error uploading file: ${uploadError.message}`)
     }
     
-    console.log('File uploaded successfully');
+    console.log('File uploaded successfully to Supabase storage');
     
     // Get the public URL
     const { data: { publicUrl } } = supabase
@@ -215,13 +231,14 @@ export async function uploadMarketingResourceFile(productId: string, resourceId:
         id: resourceId,
         product_id: productId,
         resource_type: 'document',
-        title: file.name,
+        title: fileName,
         file_path: filePath,
       })
       .select()
     
     if (createError) {
       console.error("Error creating resource record:", createError);
+      console.error("Error details:", JSON.stringify(createError));
       throw new Error(`Error creating resource: ${createError.message}`)
     }
     
