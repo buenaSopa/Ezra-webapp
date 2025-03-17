@@ -149,6 +149,9 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     setIsSubmitting(true)
     
     try {
+      // Show initial toast
+      toast.info("Creating product...", { id: "product-creation" })
+      
       const formData = new FormData(e.currentTarget)
       const productName = formData.get("productName") as string
       const productUrl = formData.get("productUrl") as string
@@ -188,8 +191,12 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       const result = await createProduct(productData)
       
       if (!result.success) {
+        toast.error(`Failed to create product: ${result.error}`, { id: "product-creation" })
         throw new Error(result.error || "Failed to create product")
       }
+      
+      // Update toast with success
+      toast.success(`Product "${productName}" created successfully!`, { id: "product-creation" })
       
       // Handle file uploads if any
       const allFiles = [
@@ -210,7 +217,14 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       
       // Upload all files as resources
       if (allFiles.length > 0) {
-        toast.info(`Uploading ${allFiles.length} files...`)
+        // Create a unique ID for the file upload toast
+        const fileUploadToastId = "file-upload-" + result.productId
+        
+        // Show initial upload toast
+        toast.info(`Uploading ${allFiles.length} files...`, { id: fileUploadToastId })
+        
+        let successCount = 0
+        let failureCount = 0
         
         for (const { file, type, title } of allFiles) {
           console.log(`Starting upload for file: ${file.name}`)
@@ -219,6 +233,10 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             // Convert File to base64 string
             const base64String = await fileToBase64(file);
             console.log(`Converted file to base64 string (length: ${base64String.length})`);
+            
+            // Show individual file upload toast
+            const fileToastId = "file-" + resourceId
+            toast.loading(`Uploading ${file.name}...`, { id: fileToastId })
             
             // Call the server action with file data instead of File object
             const result2 = await uploadMarketingResourceFile(
@@ -232,20 +250,30 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             console.log(`Upload result for ${file.name}:`, result2)
             if (!result2.success) {
               console.error(`Failed to upload file ${file.name}:`, result2.error)
-              toast.error(`Failed to upload ${file.name}: ${result2.error}`)
+              toast.error(`Failed to upload ${file.name}: ${result2.error}`, { id: fileToastId })
+              failureCount++
+            } else {
+              toast.success(`Uploaded ${file.name}`, { id: fileToastId })
+              successCount++
             }
           } catch (uploadError) {
             console.error(`Error uploading file ${file.name}:`, uploadError)
-            toast.error(`Error uploading ${file.name}`)
+            toast.error(`Error uploading ${file.name}`, { id: "file-" + resourceId })
+            failureCount++
           }
         }
         
-        toast.success(`${allFiles.length} files uploaded successfully`)
+        // Update the main file upload toast with final status
+        if (failureCount === 0) {
+          toast.success(`All ${allFiles.length} files uploaded successfully!`, { id: fileUploadToastId })
+        } else if (successCount === 0) {
+          toast.error(`Failed to upload all ${allFiles.length} files`, { id: fileUploadToastId })
+        } else {
+          toast.warning(`Uploaded ${successCount} files, ${failureCount} failed`, { id: fileUploadToastId })
+        }
       } else {
         console.log('No files to upload')
       }
-      
-      toast.success("Product created successfully!")
       
       // Reset form
       setCompetitors([])
@@ -257,9 +285,18 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         onSuccess()
       }
       
+      // Show final success message
+      toast.success(`Product "${productName}" is ready!`, { 
+        duration: 5000,
+        description: "You'll be redirected to the product page."
+      })
+      
       // Navigate to the product page
       if (result.productId) {
-        router.push(`/products/${result.productId}`)
+        // Short delay before redirect to allow user to see the success message
+        setTimeout(() => {
+          router.push(`/products/${result.productId}`)
+        }, 1000)
       }
     } catch (error) {
       console.error("Error creating product:", error)
