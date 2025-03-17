@@ -14,7 +14,8 @@ import {
   Settings, 
   HelpCircle,
   ChevronLeft,
-  PanelLeftClose
+  PanelLeftClose,
+  Package
 } from "lucide-react";
 import { AddProductIcon } from "./add-product-dialog";
 
@@ -37,7 +38,11 @@ export function Sidebar() {
         <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
+              <Link href="/products" className="block">
+                <Button variant="ghost" className="w-full justify-start">
               <h2 className="text-sm font-semibold">Products</h2>
+                </Button>
+              </Link>
               <AddProductIcon />
             </div>
             <div className="space-y-1">
