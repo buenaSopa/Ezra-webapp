@@ -4,6 +4,8 @@ import { createClient } from "./utils/supabase/server";
 import { redirect } from "next/navigation";
 import { SubmitButton } from './components/SubmitButton';
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { createProfile, generateDefaultUsername } from "./actions/createProfile";
+import { GoogleSignInButton } from './components/GoogleSignInButton';
 
 export default async function Login({
   searchParams,
@@ -46,7 +48,7 @@ export default async function Login({
     const password = formData.get("password") as string;
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -54,10 +56,20 @@ export default async function Login({
       },
     });
 
-    if (error) {
+    if (authError || !authData.user) {
       return redirect("/?message=Could not authenticate user");
     }
 
+    // Create profile for the new user
+    const { error: profileError } = await createProfile({
+      userId: authData.user.id,
+      userName: generateDefaultUsername(email),
+    });
+    if (profileError) {
+      // If profile creation fails, attempt to clean up auth user
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return redirect("/?message=Could not create user profile");
+    }
     return redirect("/?message=Check email to continue sign in process");
   };
 
@@ -111,6 +123,17 @@ export default async function Login({
               >
                 Sign Up
               </SubmitButton>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-background text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+              <GoogleSignInButton />
             </div>
 
             {searchParams?.message && (
