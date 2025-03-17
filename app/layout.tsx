@@ -1,5 +1,6 @@
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
+import { Toaster } from "sonner";
 import dynamic from 'next/dynamic';
 
 const NextNProgressClient = dynamic(() => import('@/app/components/NextNProgressClient'), { ssr: false });
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className="bg-background text-foreground">
         <NextNProgressClient />
         {children}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
