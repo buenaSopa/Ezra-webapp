@@ -3,7 +3,7 @@ import { profiles } from "./profiles";
 
 export const products = pgTable("products", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => profiles.id),
+  userId: uuid("user_id").notNull().references(() => profiles.userId),
   name: text("name").notNull(),
   description: text("description"),
   vectorDbIndexId: text("vector_db_index_id"),
