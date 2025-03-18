@@ -1,0 +1,1 @@
+ALTER TABLE "product_marketing_resources" DROP COLUMN IF EXISTS "description";
