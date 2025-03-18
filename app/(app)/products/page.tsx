@@ -36,10 +36,11 @@ import {
 export default async function ProductsPage() {
   const supabase = createClient();
   
-  // Fetch products from the database
+  // Fetch products from the database, excluding competitors
   const { data: products, error } = await supabase
     .from("products")
     .select("id, name, metadata, created_at")
+    .not("metadata->is_competitor", "eq", true) // Filter out products where is_competitor is true
     .order("created_at", { ascending: false });
   
   if (error) {
