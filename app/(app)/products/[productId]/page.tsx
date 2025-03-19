@@ -25,10 +25,12 @@ import {
   Plus,
   BarChart,
   Link as LinkIcon,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react";
 import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { getTrustpilotReviews } from "@/app/actions/trustpilot";
 
 interface ProductPageProps {
   params: {
@@ -234,6 +236,41 @@ export default function ProductPage({ params }: ProductPageProps) {
     router.push(`/chat/new?productId=${params.productId}`);
   };
 
+  const handleTestTrustpilot = async () => {
+    if (!product || !product.metadata.url) {
+      alert("Please add a product URL first to test Trustpilot reviews");
+      return;
+    }
+    
+    try {
+      // Extract domain from URL for the Trustpilot search
+      let domain = product.metadata.url;
+      try {
+        const url = new URL(domain);
+        domain = url.hostname;
+      } catch (error) {
+        // If URL parsing fails, just use the raw value
+      }
+      
+      console.log("Testing Trustpilot scraper for domain:", domain);
+      
+      // Call the Trustpilot server action
+      const results = await getTrustpilotReviews(domain);
+      
+      // Log the complete results to console
+      console.log("Trustpilot Reviews Results:", results);
+      
+      if (results.success) {
+        alert(`Successfully fetched ${results.data?.length || 0} Trustpilot reviews. Check the console for details.`);
+      } else {
+        alert(`Error fetching Trustpilot reviews: ${results.error}`);
+      }
+    } catch (error) {
+      console.error("Error calling Trustpilot API:", error);
+      alert("Error calling Trustpilot API. Check console for details.");
+    }
+  };
+
   const chatPrompts = [
     {
       category: "Customer Insights",
@@ -414,22 +451,35 @@ export default function ProductPage({ params }: ProductPageProps) {
                 
                 <div className="space-y-2">
                   <Label htmlFor="trustpilot">Trustpilot URL</Label>
-                  {isEditing ? (
-                    <Input
-                      id="trustpilot"
-                      value={product.metadata.trustpilot_url || ''}
-                      onChange={(e) => handleMetadataChange('trustpilot_url', e.target.value)}
-                      placeholder="https://trustpilot.com/review/your-product"
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {product.metadata.trustpilot_url ? (
-                        <a href={product.metadata.trustpilot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                          {product.metadata.trustpilot_url}
-                        </a>
-                      ) : "No Trustpilot URL added"}
-                    </p>
-                  )}
+                  <div className="flex flex-col space-y-2">
+                    {isEditing ? (
+                      <Input
+                        id="trustpilot"
+                        value={product.metadata.trustpilot_url || ''}
+                        onChange={(e) => handleMetadataChange('trustpilot_url', e.target.value)}
+                        placeholder="https://trustpilot.com/review/your-product"
+                      />
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm text-muted-foreground">
+                          {product.metadata.trustpilot_url ? (
+                            <a href={product.metadata.trustpilot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                              {product.metadata.trustpilot_url}
+                            </a>
+                          ) : "No Trustpilot URL added"}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleTestTrustpilot}
+                          className="flex items-center gap-1"
+                        >
+                          <Search className="h-3.5 w-3.5" />
+                          Test Trustpilot
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               
