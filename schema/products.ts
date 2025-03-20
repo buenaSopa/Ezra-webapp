@@ -7,6 +7,7 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   vectorDbIndexId: text("vector_db_index_id"),
   metadata: jsonb("metadata"), // Stores Amazon ASIN, Trustpilot URL, etc.
+  lastReviewsScrapedAt: timestamp("last_reviews_scraped_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
