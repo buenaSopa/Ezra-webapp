@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, AlertCircle, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,11 @@ interface Product {
   created_at: string;
   metadata: {
     url?: string;
+    description?: string;
+    trustpilot_url?: string;
+    amazon_asin?: string;
+    is_competitor?: boolean;
+    competitor_for?: string;
     [key: string]: any;
   };
 }
@@ -99,7 +105,7 @@ export function ProductCompetitors({
                 
                 {isEditingThisCompetitor && editedCompetitor ? (
                   <div className="flex-grow">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                    <div className="space-y-4 mb-4">
                       <div>
                         <Label htmlFor={`comp-name-${relation.id}`} className="text-xs mb-1">Name</Label>
                         <Input
@@ -110,15 +116,52 @@ export function ProductCompetitors({
                           className="h-8 text-sm"
                         />
                       </div>
+
                       <div>
-                        <Label htmlFor={`comp-url-${relation.id}`} className="text-xs mb-1">URL</Label>
-                        <Input
-                          id={`comp-url-${relation.id}`}
-                          value={editedCompetitor.metadata?.url || ''}
-                          onChange={(e) => onCompetitorMetadataChange('url', e.target.value)}
-                          placeholder="https://competitor.com"
-                          className="h-8 text-sm"
+                        <Label htmlFor={`comp-description-${relation.id}`} className="text-xs mb-1">Description</Label>
+                        <Textarea
+                          id={`comp-description-${relation.id}`}
+                          value={editedCompetitor.metadata?.description || ''}
+                          onChange={(e) => onCompetitorMetadataChange('description', e.target.value)}
+                          placeholder="Add a description for this competitor"
+                          className="min-h-[80px] text-sm"
                         />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor={`comp-url-${relation.id}`} className="text-xs mb-1">Product URL</Label>
+                          <Input
+                            id={`comp-url-${relation.id}`}
+                            value={editedCompetitor.metadata?.url || ''}
+                            onChange={(e) => onCompetitorMetadataChange('url', e.target.value)}
+                            placeholder="https://competitor.com"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`comp-trustpilot-${relation.id}`} className="text-xs mb-1">Trustpilot URL</Label>
+                          <Input
+                            id={`comp-trustpilot-${relation.id}`}
+                            value={editedCompetitor.metadata?.trustpilot_url || ''}
+                            onChange={(e) => onCompetitorMetadataChange('trustpilot_url', e.target.value)}
+                            placeholder="https://trustpilot.com/review/competitor"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor={`comp-amazon-${relation.id}`} className="text-xs mb-1">Amazon ASIN</Label>
+                          <Input
+                            id={`comp-amazon-${relation.id}`}
+                            value={editedCompetitor.metadata?.amazon_asin || ''}
+                            onChange={(e) => onCompetitorMetadataChange('amazon_asin', e.target.value)}
+                            placeholder="Enter Amazon ASIN"
+                            className="h-8 text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -136,7 +179,7 @@ export function ProductCompetitors({
                         size="sm" 
                         onClick={onSaveCompetitorEdit}
                       >
-                        Save
+                        Save Changes
                       </Button>
                     </div>
                   </div>
@@ -144,16 +187,42 @@ export function ProductCompetitors({
                   <>
                     <div className="flex flex-col flex-grow">
                       <span className="text-sm font-medium">{relation.competitor?.name || "Unknown Competitor"}</span>
-                      {relation.competitor?.metadata?.url && (
-                        <a 
-                          href={relation.competitor.metadata.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-xs text-blue-500 hover:underline"
-                        >
-                          {relation.competitor.metadata.url}
-                        </a>
+                      
+                      {relation.competitor?.metadata?.description && (
+                        <p className="text-xs text-muted-foreground mt-1 mb-1 line-clamp-2">
+                          {relation.competitor.metadata.description}
+                        </p>
                       )}
+                      
+                      <div className="space-y-1 mt-1">
+                        {relation.competitor?.metadata?.url && (
+                          <a 
+                            href={relation.competitor.metadata.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-xs text-blue-500 hover:underline flex items-center"
+                          >
+                            <span className="mr-1">•</span> Website: {relation.competitor.metadata.url}
+                          </a>
+                        )}
+                        
+                        {relation.competitor?.metadata?.trustpilot_url && (
+                          <a 
+                            href={relation.competitor.metadata.trustpilot_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-xs text-blue-500 hover:underline flex items-center"
+                          >
+                            <span className="mr-1">•</span> Trustpilot: {relation.competitor.metadata.trustpilot_url}
+                          </a>
+                        )}
+
+                        {relation.competitor?.metadata?.amazon_asin && (
+                          <p className="text-xs text-muted-foreground flex items-center">
+                            <span className="mr-1">•</span> Amazon ASIN: {relation.competitor.metadata.amazon_asin}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     
                     {isEditing && (
