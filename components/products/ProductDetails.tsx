@@ -22,13 +22,15 @@ interface ProductDetailsProps {
   isEditing: boolean;
   onMetadataChange: (field: string, value: any) => void;
   onTestTrustpilot: () => void;
+  onTestAmazon?: () => void;
 }
 
 export function ProductDetails({
   product,
   isEditing,
   onMetadataChange,
-  onTestTrustpilot
+  onTestTrustpilot,
+  onTestAmazon
 }: ProductDetailsProps) {
   return (
     <div className="space-y-4">
@@ -80,14 +82,27 @@ export function ProductDetails({
               placeholder="Enter Amazon ASIN"
             />
           ) : (
-            <p className="text-sm text-muted-foreground flex items-center">
-              {product.metadata.amazon_asin ? (
-                <>
-                  <ShoppingCart className="h-3.5 w-3.5 mr-1 text-blue-500" />
-                  <span>{product.metadata.amazon_asin}</span>
-                </>
-              ) : "No Amazon ASIN added"}
-            </p>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground flex items-center">
+                {product.metadata.amazon_asin ? (
+                  <>
+                    <ShoppingCart className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                    <span>{product.metadata.amazon_asin}</span>
+                  </>
+                ) : "No Amazon ASIN added"}
+              </p>
+              {onTestAmazon && product.metadata.amazon_asin && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onTestAmazon}
+                  className="flex items-center gap-1"
+                >
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                  Test Amazon
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>
