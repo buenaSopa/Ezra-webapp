@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { getTrustpilotReviews } from "@/app/actions/trustpilot";
+import { getAmazonReviews } from "@/app/actions/amazon";
 
 // Import custom components
 import { ProductHeader } from "@/components/products/ProductHeader";
@@ -37,6 +38,7 @@ interface ProductMetadata {
   is_competitor?: boolean;
   resources?: { name: string; url: string }[];
   image_url?: string;
+  amazon_asin?: string;
   [key: string]: any;
 }
 
@@ -432,6 +434,33 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
   };
 
+  const handleTestAmazon = async () => {
+    if (!product || !product.metadata.amazon_asin) {
+      alert("Please add an Amazon ASIN first to test Amazon reviews");
+      return;
+    }
+    
+    try {
+      const asin = product.metadata.amazon_asin;
+      console.log("Testing Amazon review scraper for ASIN:", asin);
+      
+      // Call the Amazon reviews server action with product ID to get reviews
+      const results = await getAmazonReviews(asin, params.productId);
+      
+      // Log the complete results to console
+      console.log("Amazon Reviews Results:", results);
+      
+      if (results.success) {
+        alert(`Successfully fetched ${results.data?.length || 0} Amazon reviews. Check the console for details.`);
+      } else {
+        alert(`Error fetching Amazon reviews: ${results.error}`);
+      }
+    } catch (error) {
+      console.error("Error calling Amazon API:", error);
+      alert("Error calling Amazon API. Check console for details.");
+    }
+  };
+
   // Image upload handler (placeholder)
   const handleImageUpload = () => {
     alert("Image upload functionality not implemented yet");
@@ -503,6 +532,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 isEditing={isEditing}
                 onMetadataChange={handleMetadataChange}
                 onTestTrustpilot={handleTestTrustpilot}
+                onTestAmazon={handleTestAmazon}
               />
               
               <ProductResources
