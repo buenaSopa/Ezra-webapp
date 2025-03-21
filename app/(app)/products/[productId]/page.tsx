@@ -55,6 +55,16 @@ interface Product {
   metadata: ProductMetadata;
 }
 
+// Add interface for competitor relationship
+interface ProductCompetitor {
+  id: string;
+  product_id: string;
+  competitor_product_id: string;  // Fixed column name
+  relationship_type: string;
+  created_at: string;
+  competitor?: Product; // The related competitor product
+}
+
 export default function ProductPage({ params }: ProductPageProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -63,6 +73,8 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+  const [competitors, setCompetitors] = useState<ProductCompetitor[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   
   // Fetch product data when component mounts
   useEffect(() => {
@@ -86,6 +98,69 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     fetchProduct();
   }, [params.productId, supabase]);
+  
+  // Add new effect to fetch competitors
+  useEffect(() => {
+    const fetchCompetitors = async () => {
+      if (!product) return;
+      
+      // First fetch the product_to_competitors entries for this product
+      const { data: competitorRelations, error: relationsError } = await supabase
+        .from("product_to_competitors")
+        .select("*")
+        .eq("product_id", params.productId);
+      
+      if (relationsError) {
+        console.error("Error fetching competitor relations:", relationsError);
+        return;
+      }
+      
+      // Then fetch the actual competitor products
+      if (competitorRelations && competitorRelations.length > 0) {
+        // Get all competitor product IDs
+        const competitorIds = competitorRelations.map(r => r.competitor_product_id);
+        
+        // Fetch all competitor products in a single query
+        const { data: competitorProducts, error: productsError } = await supabase
+          .from("products")
+          .select("*")
+          .in("id", competitorIds);
+        
+        if (productsError) {
+          console.error("Error fetching competitor products:", productsError);
+          return;
+        }
+        
+        // Combine the relations with their product data
+        const enrichedCompetitors = competitorRelations.map(relation => {
+          const competitorProduct = competitorProducts?.find(p => p.id === relation.competitor_product_id);
+          return {
+            ...relation,
+            competitor: competitorProduct
+          };
+        });
+        
+        setCompetitors(enrichedCompetitors);
+      } else {
+        setCompetitors([]);
+      }
+      
+      // Also fetch available products to use as potential competitors
+      const { data: allProducts, error: productsError } = await supabase
+        .from("products")
+        .select("*")
+        .neq("id", params.productId) // Exclude current product
+        .order("name");
+      
+      if (productsError) {
+        console.error("Error fetching available products:", productsError);
+      } else {
+        setAvailableProducts(allProducts || []);
+      }
+    };
+    
+    fetchCompetitors();
+  }, [product, params.productId, supabase]);
   
   const handleInputChange = (field: string, value: string) => {
     if (!product) return;
@@ -157,53 +232,79 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
   };
 
-  const handleAddCompetitor = () => {
+  const handleAddCompetitor = async (competitorId: string) => {
     if (!product) return;
     
-    const competitors = product.metadata.competitors || [];
-    setProduct({
-      ...product,
-      metadata: {
-        ...product.metadata,
-        competitors: [
-          ...competitors,
-          { name: "New Competitor", url: "" }
-        ]
-      }
-    });
+    // Add to product_to_competitors table with correct column names
+    const { error } = await supabase
+      .from("product_to_competitors")
+      .insert({
+        product_id: params.productId,
+        competitor_product_id: competitorId,
+        relationship_type: "direct_competitor"
+      });
+    
+    if (error) {
+      console.error("Error adding competitor:", error);
+      // Show error notification
+    } else {
+      // Refresh the competitors
+      const fetchCompetitors = async () => {
+        // First fetch the relations
+        const { data: relations, error: relErr } = await supabase
+          .from("product_to_competitors")
+          .select("*")
+          .eq("product_id", params.productId);
+          
+        if (relErr || !relations) {
+          console.error("Error refreshing competitor relations:", relErr);
+          return;
+        }
+          
+        // Then fetch the products
+        const competitorIds = relations.map(r => r.competitor_product_id);
+        
+        if (competitorIds.length) {
+          const { data: products, error: prodErr } = await supabase
+            .from("products")
+            .select("*")
+            .in("id", competitorIds);
+            
+          if (prodErr) {
+            console.error("Error refreshing competitor products:", prodErr);
+            return;
+          }
+          
+          // Combine data
+          const enriched = relations.map(rel => ({
+            ...rel,
+            competitor: products?.find(p => p.id === rel.competitor_product_id)
+          }));
+          
+          setCompetitors(enriched);
+        } else {
+          setCompetitors([]);
+        }
+      };
+      
+      fetchCompetitors();
+    }
   };
   
-  const handleRemoveCompetitor = (index: number) => {
-    if (!product || !product.metadata.competitors) return;
+  const handleRemoveCompetitor = async (relationId: string) => {
+    // Delete from product_to_competitors table
+    const { error } = await supabase
+      .from("product_to_competitors")
+      .delete()
+      .eq("id", relationId);
     
-    const competitors = [...product.metadata.competitors];
-    competitors.splice(index, 1);
-    
-    setProduct({
-      ...product,
-      metadata: {
-        ...product.metadata,
-        competitors
-      }
-    });
-  };
-  
-  const handleCompetitorChange = (index: number, field: string, value: string) => {
-    if (!product || !product.metadata.competitors) return;
-    
-    const competitors = [...product.metadata.competitors];
-    competitors[index] = {
-      ...competitors[index],
-      [field]: value
-    };
-    
-    setProduct({
-      ...product,
-      metadata: {
-        ...product.metadata,
-        competitors
-      }
-    });
+    if (error) {
+      console.error("Error removing competitor:", error);
+      // Show error notification
+    } else {
+      // Update local state
+      setCompetitors(competitors.filter(c => c.id !== relationId));
+    }
   };
 
   const handleSaveProduct = async () => {
@@ -555,61 +656,65 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div className="flex items-center justify-between">
                   <Label>Competitors</Label>
                   {isEditing && (
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleAddCompetitor}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Competitor
-                    </Button>
+                    <div className="flex space-x-2">
+                      <select 
+                        className="text-sm rounded border p-1"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAddCompetitor(e.target.value);
+                            e.target.value = ""; // Reset after selection
+                          }
+                        }}
+                      >
+                        <option value="">Select competitor...</option>
+                        {availableProducts.map(prod => (
+                          <option key={prod.id} value={prod.id}>
+                            {prod.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => router.push('/products/new')}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> New Competitor
+                      </Button>
+                    </div>
                   )}
                 </div>
                 
-                {product.metadata.competitors?.length ? (
+                {competitors.length ? (
                   <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
-                    {product.metadata.competitors.map((competitor, index) => (
-                      <div key={index} className={`flex items-center gap-2 ${isEditing ? 'mb-2' : ''}`}>
+                    {competitors.map((relation) => (
+                      <div key={relation.id} className="flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
                         
-                        {isEditing ? (
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-2 w-full">
-                            <Input
-                              className="md:col-span-2"
-                              value={competitor.name}
-                              onChange={(e) => handleCompetitorChange(index, 'name', e.target.value)}
-                              placeholder="Competitor name"
-                            />
-                            <Input
-                              className="md:col-span-2"
-                              value={competitor.url}
-                              onChange={(e) => handleCompetitorChange(index, 'url', e.target.value)}
-                              placeholder="https://competitor.com"
-                            />
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-destructive hover:text-destructive/90"
-                              onClick={() => handleRemoveCompetitor(index)}
+                        <div className="flex flex-col flex-grow">
+                          <span className="text-sm font-medium">{relation.competitor?.name || "Unknown Competitor"}</span>
+                          {relation.competitor?.metadata?.url && (
+                            <a 
+                              href={relation.competitor.metadata.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs text-blue-500 hover:underline"
                             >
-                              Remove
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">{competitor.name}</span>
-                            {competitor.url && (
-                              <a 
-                                href={competitor.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="text-xs text-blue-500 hover:underline"
-                              >
-                                {competitor.url}
-                              </a>
-                            )}
-                          </div>
+                              {relation.competitor.metadata.url}
+                            </a>
+                          )}
+                        </div>
+                        
+                        {isEditing && (
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:text-destructive/90"
+                            onClick={() => handleRemoveCompetitor(relation.id)}
+                          >
+                            Remove
+                          </Button>
                         )}
                       </div>
                     ))}
