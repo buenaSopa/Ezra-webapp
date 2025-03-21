@@ -140,19 +140,6 @@ export function ProductCompetitors({
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`comp-trustpilot-${relation.id}`} className="text-xs mb-1">Trustpilot URL</Label>
-                          <Input
-                            id={`comp-trustpilot-${relation.id}`}
-                            value={editedCompetitor.metadata?.trustpilot_url || ''}
-                            onChange={(e) => onCompetitorMetadataChange('trustpilot_url', e.target.value)}
-                            placeholder="https://trustpilot.com/review/competitor"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
                           <Label htmlFor={`comp-amazon-${relation.id}`} className="text-xs mb-1">Amazon ASIN</Label>
                           <Input
                             id={`comp-amazon-${relation.id}`}
@@ -206,17 +193,6 @@ export function ProductCompetitors({
                           </a>
                         )}
                         
-                        {relation.competitor?.metadata?.trustpilot_url && (
-                          <a 
-                            href={relation.competitor.metadata.trustpilot_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-xs text-blue-500 hover:underline flex items-center"
-                          >
-                            <span className="mr-1">•</span> Trustpilot: {relation.competitor.metadata.trustpilot_url}
-                          </a>
-                        )}
-
                         {relation.competitor?.metadata?.amazon_asin && (
                           <p className="text-xs text-muted-foreground flex items-center">
                             <span className="mr-1">•</span> Amazon ASIN: {relation.competitor.metadata.amazon_asin}
