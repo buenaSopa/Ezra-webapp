@@ -1,137 +1,39 @@
-Trustpilot scrap
-businessUnitId: "624c24851220e2743a4d7916"
-​​​
-companyName: "Wag + Tail"
-​​​
-companyPageUrl: "https://www.trustpilot.com/review/shopwagandtail.com?languages=all&sort=recency&verified=true"
-​​​
-isReviewVerified: true
-​​​
-reviewCompanyResponse: ""
-​​​
-reviewDate: "Friday, March 22, 2024 at 01:22:45 PM"
-​​​
-reviewDateOfExperience: "January 27, 2024"
-​​​
-reviewDescription: "Great product looks so cute on my girl and fits so well"
-​​​
-reviewId: "65fd6a055de8c560404349e1"
-​​​
-reviewLabel: ""
-​​​
-reviewLanguage: "all"
-​​​
-reviewRatingScore: 5
-​​​
-reviewTitle: "Great product looks so cute on my girl…"
-​​​
-reviewUrl: "https://trustpilot.com/reviews/65fd6a055de8c560404349e1"
-​​​
-reviewer: "Angela Rosalie"
-​​​
-reviewersCountry: "US"
-​​​
-scrapedAtReviewPageNumber: 1
-​​​
-scrapedDateTime: "2025-03-19T12:31:07.680Z"
-
-
-Amazon scrap
-{
-  "PageUrl": "https://www.amazon.com/product-reviews/B07ZPKN6YR?sortBy=recent&reviewerType=avp_only_reviews&filterByStar=one_star&mediaType=all_contents&pageNumber=6&language=en_US",
-  "ProductLink": "https://www.amazon.com/dp/B07ZPKN6YR",
-  "ASIN": "B07ZPKN6YR",
-  "Brand": "Amazon Renewed",
-  "ProductTitle": "Apple iPhone 11, 64GB, Black - Unlocked (Renewed)",
-  "ParentId": "R33MF3RVKDAOMI",
-  "ReviewDate": "October 18, 2024",
-  "Images": [
-    "https://m.media-amazon.com/images/I/51ptVKLZb3L.jpg",
-    "https://m.media-amazon.com/images/I/51yZBr54TfL.jpg",
-    "https://m.media-amazon.com/images/I/61APGmqsBeL.jpg",
-    "https://m.media-amazon.com/images/I/61HVljlCPML.jpg",
-    "https://m.media-amazon.com/images/I/61oBcPuN-3L.jpg",
-    "https://m.media-amazon.com/images/I/71czPjgrO5L.jpg"
-     ],
-  "ReviewScore": "1.0",
-  "Reviewer": "SBSB",
-  "ReviewTitle": "Not refurbished excellent",
-  "ReviewContent": "Unfortunately there are 43 scratches 3 dents & 2 gouges. There are three refurbished tears I chose the excellent option at the cost of $266.31. It seems the only thing \"renewed\" here is the front screen use the pictures provided and determined for yourselves whether or not it is false advertisement and worth the investment.",
-  "Verified": "True",
-  "Variant": [
-    "Size: 128GB",
-    "Color: Red",
-    "Service Provider: Unlocked",
-    "Product grade: Renewed"
-    ],
-  "HelpfulCounts": "1"
+Sample review date format: Friday, March 22, 2024 at 01:22:45 PM
+Sample review object: {
+  "companyPageUrl": "https://www.trustpilot.com/review/shopwagandtail.com?languages=all&sort=recency&verified=true",
+  "reviewId": "65fd6a055de8c560404349e1",
+  "companyName": "Wag + Tail",
+  "businessUnitId": "624c24851220e2743a4d7916",
+  "reviewUrl": "https://trustpilot.com/reviews/65fd6a055de8c560404349e1",
+  "reviewDate": "Friday, March 22, 2024 at 01:22:45 PM",
+  "reviewDateOfExperience": "January 27, 2024",
+  "reviewLabel": "",
+  "isReviewVerified": true,
+  "reviewer": "Angela Rosalie",
+  "reviewTitle": "Great product looks so cute on my girl…",
+  "reviewDescription": "Great product looks so cute on my girl and fits so well",
+  "reviewRatingScore": 5,
+  "reviewersCountry": "US",
+  "reviewLanguage": "all",
+  "reviewCompanyResponse": "",
+  "scrapedDateTime": "2025-03-20T15:43:30.827Z",
+  "scrapedAtReviewPageNumber": 1
 }
-
-
-
-Qdrant + llamaindex:
-import { QdrantVectorStore } from "@llamaindex/qdrant";
-import * as dotenv from "dotenv";
-import {
-  Document,
-  MetadataMode,
-  NodeWithScore,
-  Settings,
-  VectorStoreIndex,
-  storageContextFromDefaults,
-} from "llamaindex";
-
-// Update callback manager
-Settings.callbackManager.on("retrieve-end", (event) => {
-  const { nodes } = event.detail;
-  console.log(
-    "The retrieved nodes are:",
-    nodes.map((node: NodeWithScore) => node.node.getContent(MetadataMode.NONE)),
-  );
-});
-
-// Load environment variables from local .env file
-dotenv.config();
-
-const collectionName = "dog_colors";
-const qdrantUrl = "http://127.0.0.1:6333";
-
-async function main() {
-  try {
-    const docs = [
-      new Document({
-        text: "The dog is brown",
-        metadata: {
-          dogId: "1",
-        },
-      }),
-      new Document({
-        text: "The dog is red",
-        metadata: {
-          dogId: "2",
-        },
-      }),
-      new Document({
-        text: "The dog is black",
-        metadata: {
-          dogId: "3",
-        },
-      }),
-    ];
-    console.log("Creating QdrantDB vector store");
-    const qdrantVs = new QdrantVectorStore({ url: qdrantUrl, collectionName });
-    const ctx = await storageContextFromDefaults({ vectorStore: qdrantVs });
-
-    console.log("Embedding documents and adding to index");
-    const index = await VectorStoreIndex.fromDocuments(docs, {
-      storageContext: ctx,
-    });
-
-    console.log(
-      "Querying index with no filters: Expected output: Brown probably",
-    );
-    const queryEngineNoFilters = index.asQueryEngine();
-    const noFilterResponse = await queryEngineNoFilters.query({
-      query: "What is the color of the dog?",
-    });
-    console.
+Error storing reviews in database: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'productId' column of 'review_sources' in the schema cache"
+}
+Error in storeReviewsInDatabase: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'productId' column of 'review_sources' in the schema cache"
+}
+Error fetching Trustpilot reviews: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'productId' column of 'review_sources' in the schema cache"
+}

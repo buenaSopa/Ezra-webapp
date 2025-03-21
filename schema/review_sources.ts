@@ -9,7 +9,8 @@ export const reviewSources = pgTable("review_sources", {
   reviewText: text("review_text").notNull(), // Main review content
   reviewTitle: text("review_title"), // Review title/heading
   rating: real("rating").notNull(), // Normalized 1-5 scale
-  reviewDate: timestamp("review_date").notNull(), // When the review was posted
+  reviewDate: text("review_date"), // Original date string from the review source
+  reviewDateTimestamp: timestamp("review_date_timestamp"), // Parsed date as timestamp (optional)
   reviewerName: text("reviewer_name"), // Name of the reviewer
   verified: boolean("verified").default(false), // Whether the review is verified
   sourceData: jsonb("source_data").notNull(), // Complete original review data
@@ -29,7 +30,7 @@ export const reviewSourcesIndexes = {
     columns: ["product_id"],
   },
   reviewDateIdx: {
-    name: "review_sources_review_date_idx",
-    columns: ["review_date"],
+    name: "review_sources_review_date_timestamp_idx",
+    columns: ["review_date_timestamp"],
   },
 }; 
