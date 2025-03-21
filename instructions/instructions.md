@@ -1,4 +1,5 @@
-# **AI Chatbot Tech Scope**
+# **AI tool for creative strategist**
+Help creative strategirst to research and ideate ads idea from customer reviews and product information and all
 
 ## **Tech Stack Overview**
 
@@ -30,13 +31,12 @@ Develop a tool for creative strategists to streamline research, ideation, and ad
 ### **User Workflow:**
 
 #### **Step 1: Upload & Contextualization**
-- User provides a **review link** and **product link**
+- User provides **product link**, and extra resouces like amazon asin and other docs and competitor products link
 - System extracts data from:
-  - Customer reviews (via scraping/CSV input)
-  - Product descriptions
-  - Metadata (e.g., price, ratings, key features)
-- AI processes and **primes the model** with relevant context
-- **Output:** A detailed product and sentiment analysis
+  - Customer reviews (via scraping/CSV input) apify trustpilot and amazon review
+  - Product info from website
+- Update all the data into llamaindex and qdrant rag
+- create rag queries allowing user to ask question regarding their brand and competitor brand, sentimental analysis and marketing angle maybe
 
 #### **Step 2: Concept & Angle Generation**
 - AI suggests **marketing angles** ranked by success probability
@@ -45,7 +45,6 @@ Develop a tool for creative strategists to streamline research, ideation, and ad
 
 #### **Step 3: Ad Script Generation**
 - User selects a concept to create an **ad script session**
-- Redirects to **Ezra's Ad Script Section**
 - Users can:
   - Choose a template (e.g., Hook, Problem Amplification, Solution, CTA)
   - Get AI-generated script suggestions
