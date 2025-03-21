@@ -349,20 +349,20 @@ export default function ProductPage({ params }: ProductPageProps) {
       ...editedCompetitor, 
       [field]: value
     });
-  };
+    };
   
   const handleCompetitorMetadataChange = (field: string, value: any) => {
     if (!editedCompetitor) return;
     
     setEditedCompetitor({ 
       ...editedCompetitor, 
-      metadata: { 
+      metadata: {
         ...editedCompetitor.metadata, 
         [field]: value 
-      } 
+      }
     });
   };
-  
+
   const handleCancelCompetitorEdit = () => {
     setEditingCompetitorId(null);
     setEditedCompetitor(null);
