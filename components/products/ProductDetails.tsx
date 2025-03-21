@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Search } from "lucide-react";
+import { Search, ShoppingCart } from "lucide-react";
 
 interface Product {
   id: string;
@@ -12,6 +12,7 @@ interface Product {
     description?: string;
     url?: string;
     trustpilot_url?: string;
+    amazon_asin?: string;
     [key: string]: any;
   };
 }
@@ -70,38 +71,45 @@ export function ProductDetails({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="trustpilot">Trustpilot URL</Label>
-          <div className="flex flex-col space-y-2">
-            {isEditing ? (
-              <Input
-                id="trustpilot"
-                value={product.metadata.trustpilot_url || ''}
-                onChange={(e) => onMetadataChange('trustpilot_url', e.target.value)}
-                placeholder="https://trustpilot.com/review/your-product"
-              />
-            ) : (
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                  {product.metadata.trustpilot_url ? (
-                    <a href={product.metadata.trustpilot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      {product.metadata.trustpilot_url}
-                    </a>
-                  ) : "No Trustpilot URL added"}
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onTestTrustpilot}
-                  className="flex items-center gap-1"
-                >
-                  <Search className="h-3.5 w-3.5" />
-                  Test Trustpilot
-                </Button>
-              </div>
-            )}
-          </div>
+          <Label htmlFor="amazonAsin">Amazon ASIN</Label>
+          {isEditing ? (
+            <Input
+              id="amazonAsin"
+              value={product.metadata.amazon_asin || ''}
+              onChange={(e) => onMetadataChange('amazon_asin', e.target.value)}
+              placeholder="Enter Amazon ASIN"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground flex items-center">
+              {product.metadata.amazon_asin ? (
+                <>
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                  <span>{product.metadata.amazon_asin}</span>
+                </>
+              ) : "No Amazon ASIN added"}
+            </p>
+          )}
         </div>
       </div>
+      
+      {/* Trustpilot section - only visible in view mode */}
+      {!isEditing && (
+        <div className="flex justify-between items-center mt-4 p-3 bg-muted/30 rounded-md">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Label className="font-medium text-sm m-0">Trustpilot Reviews</Label>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onTestTrustpilot}
+            className="flex items-center gap-1"
+          >
+            <Search className="h-3.5 w-3.5" />
+            Test Trustpilot
+          </Button>
+        </div>
+      )}
     </div>
   );
 } 
