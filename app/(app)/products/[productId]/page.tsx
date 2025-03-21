@@ -4,34 +4,26 @@ import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
-  CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  MessageSquare, 
-  Settings, 
-  Edit, 
-  Save, 
-  ExternalLink, 
-  Upload, 
-  Star, 
-  Plus,
-  BarChart,
-  Link as LinkIcon,
-  AlertCircle,
-  Search
-} from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { getTrustpilotReviews } from "@/app/actions/trustpilot";
 
+// Import custom components
+import { ProductHeader } from "@/components/products/ProductHeader";
+import { ProductDetails } from "@/components/products/ProductDetails";
+import { ProductResources } from "@/components/products/ProductResources";
+import { ProductCompetitors } from "@/components/products/ProductCompetitors";
+import { ProductImage } from "@/components/products/ProductImage";
+import DefaultInsightsTab from "@/components/products/InsightsTab";
+import DefaultChatsTab from "@/components/products/ChatsTab";
+
+// Define interfaces for the page
 interface ProductPageProps {
   params: {
     productId: string;
@@ -44,6 +36,7 @@ interface ProductMetadata {
   trustpilot_url?: string;
   is_competitor?: boolean;
   resources?: { name: string; url: string }[];
+  image_url?: string;
   [key: string]: any;
 }
 
@@ -54,14 +47,14 @@ interface Product {
   metadata: ProductMetadata;
 }
 
-// Add interface for competitor relationship
+// Interface for competitor relationship
 interface ProductCompetitor {
   id: string;
   product_id: string;
   competitor_product_id: string;
   relationship_type: string;
   created_at: string;
-  competitor?: Product; // The related competitor product
+  competitor?: Product;
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
@@ -163,6 +156,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     fetchCompetitors();
   }, [product, params.productId, supabase]);
   
+  // Product field change handlers
   const handleInputChange = (field: string, value: string) => {
     if (!product) return;
     
@@ -184,6 +178,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
   };
   
+  // Resource management handlers
   const handleAddResource = () => {
     if (!product) return;
     
@@ -233,7 +228,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
   };
 
-  // New competitor management functions
+  // Competitor management handlers
   const handleAddCompetitor = async (competitorId: string) => {
     if (!product) return;
     
@@ -309,14 +304,12 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
   };
   
-  // Add this new function to handle editing a competitor
   const handleEditCompetitor = (relation: ProductCompetitor) => {
     if (!relation.competitor) return;
     setEditingCompetitorId(relation.competitor.id);
     setEditedCompetitor({...relation.competitor});
   };
   
-  // Add this function to handle saving competitor edits
   const handleSaveCompetitorEdit = async () => {
     if (!editedCompetitor) return;
     
@@ -349,7 +342,15 @@ export default function ProductPage({ params }: ProductPageProps) {
     setEditedCompetitor(null);
   };
   
-  // Add this function to handle competitor metadata changes
+  const handleCompetitorChange = (field: string, value: string) => {
+    if (!editedCompetitor) return;
+    
+    setEditedCompetitor({ 
+      ...editedCompetitor, 
+      [field]: value
+    });
+  };
+  
   const handleCompetitorMetadataChange = (field: string, value: any) => {
     if (!editedCompetitor) return;
     
@@ -362,12 +363,12 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
   };
   
-  // Add this function to cancel competitor editing
   const handleCancelCompetitorEdit = () => {
     setEditingCompetitorId(null);
     setEditedCompetitor(null);
   };
 
+  // Product save and navigation handlers
   const handleSaveProduct = async () => {
     if (!product) return;
     
@@ -383,9 +384,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     if (error) {
       console.error("Error updating product:", error);
-      // Show error notification here
-    } else {
-      // Show success notification here
+      alert("Error updating product: " + error.message);
     }
     
     setIsSaving(false);
@@ -433,38 +432,10 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
   };
 
-  const chatPrompts = [
-    {
-      category: "Customer Insights",
-      prompts: [
-        {
-          title: "Find winning concepts from reviews",
-      description: "Analyze customer reviews to identify successful marketing angles",
-          icon: <Star className="h-4 w-4 text-amber-500" />
-    },
-    {
-          title: "Summarize negative reviews",
-      description: "Get insights from negative feedback to improve marketing strategy",
-          icon: <MessageSquare className="h-4 w-4 text-red-500" />
-        }
-      ]
-    },
-    {
-      category: "Content Creation",
-      prompts: [
-        {
-          title: "Build a storyboard for my next ad",
-      description: "Create a compelling narrative structure for your advertisement",
-          icon: <Upload className="h-4 w-4 text-blue-500" />
-    },
-    {
-          title: "Identify top purchase triggers",
-      description: "Identify key factors that drive customer purchasing decisions",
-          icon: <BarChart className="h-4 w-4 text-green-500" />
-        }
-      ]
-    }
-  ];
+  // Image upload handler (placeholder)
+  const handleImageUpload = () => {
+    alert("Image upload functionality not implemented yet");
+  };
 
   if (isLoading) {
     return (
@@ -490,11 +461,11 @@ export default function ProductPage({ params }: ProductPageProps) {
           <CardContent>
             <p className="text-muted-foreground">{fetchError || "Unable to load product information"}</p>
           </CardContent>
-          <CardFooter>
+          <div className="p-6 pt-0">
             <Button onClick={() => router.push('/products')}>
               Return to Products
             </Button>
-          </CardFooter>
+          </div>
         </Card>
       </div>
     );
@@ -502,62 +473,17 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   return (
     <div className="container max-w-6xl mx-auto p-6 h-full overflow-y-auto">
-      <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-          <div className="h-16 w-16 bg-muted rounded-lg flex items-center justify-center text-2xl font-bold">
-            {product.name.charAt(0)}
-          </div>
-          <div>
-            {isEditing ? (
-              <Input
-                value={product.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="text-xl font-bold mb-1 h-9"
-              />
-            ) : (
-              <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
-            )}
-            <p className="text-sm text-muted-foreground">
-              {isEditing ? (
-                <Input
-                  value={product.metadata.url || ''}
-                  onChange={(e) => handleMetadataChange('url', e.target.value)}
-                  placeholder="Add product URL"
-                  className="mt-1 text-sm"
-                />
-              ) : product.metadata.url ? (
-                <a href={product.metadata.url} target="_blank" rel="noopener noreferrer" className="flex items-center hover:underline text-blue-500">
-                  <ExternalLink className="h-3 w-3 mr-1" /> View product
-                </a>
-              ) : (
-                "No product URL added"
-              )}
-            </p>
-          </div>
-        </div>
-        
-            <div className="flex flex-col sm:flex-row gap-2">
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveProduct} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          ) : (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Edit className="h-4 w-4 mr-2" /> Edit Product
-              </Button>
-              <Button onClick={handleStartChat}>
-                <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <ProductHeader
+        product={product}
+        isEditing={isEditing}
+        isSaving={isSaving}
+        onEdit={() => setIsEditing(true)}
+        onSave={handleSaveProduct}
+        onCancel={() => setIsEditing(false)}
+        onStartChat={handleStartChat}
+        onInputChange={handleInputChange}
+        onMetadataChange={handleMetadataChange}
+      />
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="mb-6">
@@ -570,385 +496,55 @@ export default function ProductPage({ params }: ProductPageProps) {
           <Card>
             <CardHeader>
               <CardTitle>Product Information</CardTitle>
-              <CardDescription>
-                Manage your product details and metadata
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                {isEditing ? (
-                  <Textarea
-                    id="description"
-                    value={product.metadata.description || ''}
-                    onChange={(e) => handleMetadataChange('description', e.target.value)}
-                    placeholder="Add a description for your product"
-                    className="min-h-[100px]"
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">{product.metadata.description || "No description added"}</p>
-                )}
-              </div>
+            <CardContent className="space-y-6">
+              <ProductDetails
+                product={product}
+                isEditing={isEditing}
+                onMetadataChange={handleMetadataChange}
+                onTestTrustpilot={handleTestTrustpilot}
+              />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="productUrl">Product URL</Label>
-                  {isEditing ? (
-                    <Input
-                      id="productUrl"
-                      value={product.metadata.url || ''}
-                      onChange={(e) => handleMetadataChange('url', e.target.value)}
-                      placeholder="https://your-product.com"
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {product.metadata.url ? (
-                        <a href={product.metadata.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                          {product.metadata.url}
-                        </a>
-                      ) : "No URL added"}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="trustpilot">Trustpilot URL</Label>
-                  <div className="flex flex-col space-y-2">
-                  {isEditing ? (
-                    <Input
-                      id="trustpilot"
-                      value={product.metadata.trustpilot_url || ''}
-                      onChange={(e) => handleMetadataChange('trustpilot_url', e.target.value)}
-                      placeholder="https://trustpilot.com/review/your-product"
-                    />
-                  ) : (
-                      <div className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground">
-                      {product.metadata.trustpilot_url ? (
-                        <a href={product.metadata.trustpilot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                          {product.metadata.trustpilot_url}
-                        </a>
-                      ) : "No Trustpilot URL added"}
-                    </p>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={handleTestTrustpilot}
-                          className="flex items-center gap-1"
-                        >
-                          <Search className="h-3.5 w-3.5" />
-                          Test Trustpilot
-                        </Button>
-                      </div>
-                  )}
-                </div>
-              </div>
-              </div>
+              <ProductResources
+                resources={product.metadata.resources || []}
+                isEditing={isEditing}
+                onAddResource={handleAddResource}
+                onRemoveResource={handleRemoveResource}
+                onResourceChange={handleResourceChange}
+              />
               
-              {/* Product Resources */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <Label>Product Resources</Label>
-                  {isEditing && (
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleAddResource}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Resource
-                    </Button>
-                  )}
-                </div>
-                
-                {product.metadata.resources?.length ? (
-                  <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
-                    {product.metadata.resources.map((resource, index) => (
-                      <div key={index} className={`flex items-center gap-2 ${isEditing ? 'mb-2' : ''}`}>
-                        <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                        
-                        {isEditing ? (
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-2 w-full">
-                            <Input
-                              className="md:col-span-2"
-                              value={resource.name}
-                              onChange={(e) => handleResourceChange(index, 'name', e.target.value)}
-                              placeholder="Resource name"
-                            />
-                            <Input
-                              className="md:col-span-2"
-                              value={resource.url}
-                              onChange={(e) => handleResourceChange(index, 'url', e.target.value)}
-                              placeholder="https://example.com"
-                            />
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-destructive hover:text-destructive/90"
-                              onClick={() => handleRemoveResource(index)}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">{resource.name}</span>
-                            <a 
-                              href={resource.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-xs text-blue-500 hover:underline"
-                            >
-                              {resource.url}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No resources added yet</p>
-                )}
-              </div>
-              
-              {/* Competitors Section */}
-              <div className="space-y-3 pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <Label>Competitors</Label>
-                  {isEditing && (
-                    <div className="flex space-x-2">
-                      <select 
-                        className="text-sm rounded border p-1"
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            handleAddCompetitor(e.target.value);
-                            e.target.value = ""; // Reset after selection
-                          }
-                        }}
-                      >
-                        <option value="">Select competitor...</option>
-                        {availableProducts.map(prod => (
-                          <option key={prod.id} value={prod.id}>
-                            {prod.name}
-                          </option>
-                        ))}
-                      </select>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => router.push('/products/new')}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> New Competitor
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                
-                {competitors.length ? (
-                  <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
-                    {competitors.map((relation) => {
-                      const isEditingThisCompetitor = relation.competitor && editingCompetitorId === relation.competitor.id;
-                      
-                      return (
-                        <div key={relation.id} className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-1" />
-                          
-                          {isEditingThisCompetitor && editedCompetitor ? (
-                            <div className="flex-grow">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                                <div>
-                                  <Label htmlFor={`comp-name-${relation.id}`} className="text-xs mb-1">Name</Label>
-                                  <Input
-                                    id={`comp-name-${relation.id}`}
-                                    value={editedCompetitor.name}
-                                    onChange={(e) => setEditedCompetitor({...editedCompetitor, name: e.target.value})}
-                                    placeholder="Competitor name"
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor={`comp-url-${relation.id}`} className="text-xs mb-1">URL</Label>
-                                  <Input
-                                    id={`comp-url-${relation.id}`}
-                                    value={editedCompetitor.metadata?.url || ''}
-                                    onChange={(e) => handleCompetitorMetadataChange('url', e.target.value)}
-                                    placeholder="https://competitor.com"
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-                              </div>
-                              <div className="flex justify-end space-x-2">
-                                <Button 
-                                  type="button" 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={handleCancelCompetitorEdit}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button 
-                                  type="button" 
-                                  variant="default" 
-                                  size="sm" 
-                                  onClick={handleSaveCompetitorEdit}
-                                >
-                                  Save
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex flex-col flex-grow">
-                                <span className="text-sm font-medium">{relation.competitor?.name || "Unknown Competitor"}</span>
-                                {relation.competitor?.metadata?.url && (
-                                  <a 
-                                    href={relation.competitor.metadata.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-xs text-blue-500 hover:underline"
-                                  >
-                                    {relation.competitor.metadata.url}
-                                  </a>
-                                )}
-                              </div>
-                              
-                              {isEditing && (
-                                <div className="flex space-x-1">
-                                  <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 px-2"
-                                    onClick={() => handleEditCompetitor(relation)}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                  <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 px-2 text-destructive hover:text-destructive/90"
-                                    onClick={() => handleRemoveCompetitor(relation.id)}
-                                  >
-                                    <span className="sr-only">Remove</span>
-                                    <AlertCircle className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No competitors added yet</p>
-                )}
-              </div>
+              <ProductCompetitors
+                competitors={competitors}
+                availableProducts={availableProducts}
+                isEditing={isEditing}
+                editingCompetitorId={editingCompetitorId}
+                editedCompetitor={editedCompetitor}
+                onAddCompetitor={handleAddCompetitor}
+                onRemoveCompetitor={handleRemoveCompetitor}
+                onEditCompetitor={handleEditCompetitor}
+                onSaveCompetitorEdit={handleSaveCompetitorEdit}
+                onCancelCompetitorEdit={handleCancelCompetitorEdit}
+                onCompetitorChange={handleCompetitorChange}
+                onCompetitorMetadataChange={handleCompetitorMetadataChange}
+              />
 
-              <div className="space-y-2 pt-4 border-t">
-                <Label>Product Image</Label>
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">Drag and drop an image, or click to browse</p>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    Upload Image
-                  </Button>
-                </div>
-              </div>
+              <ProductImage 
+                imageUrl={product.metadata.image_url} 
+                onUpload={handleImageUpload} 
+              />
             </CardContent>
           </Card>
         </TabsContent>
         
         <TabsContent value="insights" className="pb-6">
-          <div className="space-y-6">
-            {chatPrompts.map((category, idx) => (
-              <div key={idx} className="space-y-3">
-                <h2 className="text-lg font-medium">{category.category}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {category.prompts.map((prompt, index) => (
-                    <Card key={index} className="p-4 hover:bg-muted/50 cursor-pointer transition-colors">
-                      <div className="flex items-start gap-4">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                          {prompt.icon}
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">{prompt.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{prompt.description}</p>
-                </div>
-              </div>
-            </Card>
-                  ))}
-                  
-                  <Card className="p-4 border-dashed hover:bg-muted/20 cursor-pointer transition-colors">
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <div className="p-2 bg-muted rounded-full mx-auto w-fit mb-2">
-                          <Plus className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <p className="text-sm font-medium">Create custom prompt</p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </div>
-          ))}
-        </div>
+          <DefaultInsightsTab productName={product.name} />
         </TabsContent>
         
         <TabsContent value="chats" className="pb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Previous chats about {product.name}</CardTitle>
-              <CardDescription>
-                View your conversation history about this product
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-          <div className="space-y-4">
-            <Card className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                      <h3 className="font-medium text-foreground">{product.name} reduces your Tan lines</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                        I've been using the {product.name} for a week now, and I can already see a reduction in my tan lines.
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Created on May 15, 2023
-                  </p>
-                </div>
-              </div>
-            </Card>
-                
-                <Card className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <MessageSquare className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground">Competitor analysis: {product.name} vs alternatives</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Analyzed how {product.name} compares to top 3 competitors in the market.
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Created on April 28, 2023
-                      </p>
-          </div>
-        </div>
-                </Card>
-                
-                <Button variant="outline" className="w-full" onClick={handleStartChat}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Start New Chat
-                </Button>
-      </div>
-            </CardContent>
-          </Card>
+          <DefaultChatsTab 
+            productName={product.name} 
+            onStartChat={handleStartChat} 
+          />
         </TabsContent>
       </Tabs>
     </div>
