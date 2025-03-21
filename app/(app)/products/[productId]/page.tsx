@@ -44,7 +44,6 @@ interface ProductMetadata {
   trustpilot_url?: string;
   is_competitor?: boolean;
   resources?: { name: string; url: string }[];
-  competitors?: { name: string; url: string }[];
   [key: string]: any;
 }
 
@@ -59,7 +58,7 @@ interface Product {
 interface ProductCompetitor {
   id: string;
   product_id: string;
-  competitor_product_id: string;  // Fixed column name
+  competitor_product_id: string;
   relationship_type: string;
   created_at: string;
   competitor?: Product; // The related competitor product
@@ -75,6 +74,8 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [product, setProduct] = useState<Product | null>(null);
   const [competitors, setCompetitors] = useState<ProductCompetitor[]>([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
+  const [editedCompetitor, setEditedCompetitor] = useState<Product | null>(null);
   
   // Fetch product data when component mounts
   useEffect(() => {
@@ -232,6 +233,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     });
   };
 
+  // New competitor management functions
   const handleAddCompetitor = async (competitorId: string) => {
     if (!product) return;
     
@@ -246,7 +248,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     if (error) {
       console.error("Error adding competitor:", error);
-      // Show error notification
+      alert("Error adding competitor: " + error.message);
     } else {
       // Refresh the competitors
       const fetchCompetitors = async () => {
@@ -300,11 +302,70 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     if (error) {
       console.error("Error removing competitor:", error);
-      // Show error notification
+      alert("Error removing competitor: " + error.message);
     } else {
       // Update local state
       setCompetitors(competitors.filter(c => c.id !== relationId));
     }
+  };
+  
+  // Add this new function to handle editing a competitor
+  const handleEditCompetitor = (relation: ProductCompetitor) => {
+    if (!relation.competitor) return;
+    setEditingCompetitorId(relation.competitor.id);
+    setEditedCompetitor({...relation.competitor});
+  };
+  
+  // Add this function to handle saving competitor edits
+  const handleSaveCompetitorEdit = async () => {
+    if (!editedCompetitor) return;
+    
+    const { error } = await supabase
+      .from('products')
+      .update({
+        name: editedCompetitor.name,
+        metadata: editedCompetitor.metadata
+      })
+      .eq('id', editedCompetitor.id);
+    
+    if (error) {
+      console.error("Error updating competitor:", error);
+      alert("Error updating competitor: " + error.message);
+    } else {
+      // Update the competitor in the local state
+      setCompetitors(competitors.map(relation => {
+        if (relation.competitor && relation.competitor.id === editedCompetitor.id) {
+          return {
+            ...relation,
+            competitor: editedCompetitor
+          };
+        }
+        return relation;
+      }));
+    }
+    
+    // Reset editing state
+    setEditingCompetitorId(null);
+    setEditedCompetitor(null);
+  };
+  
+  // Add this function to handle competitor metadata changes
+  const handleCompetitorMetadataChange = (field: string, value: any) => {
+    if (!editedCompetitor) return;
+    
+    setEditedCompetitor({ 
+      ...editedCompetitor, 
+      metadata: { 
+        ...editedCompetitor.metadata, 
+        [field]: value 
+      } 
+    });
+  };
+  
+  // Add this function to cancel competitor editing
+  const handleCancelCompetitorEdit = () => {
+    setEditingCompetitorId(null);
+    setEditedCompetitor(null);
   };
 
   const handleSaveProduct = async () => {
@@ -687,37 +748,100 @@ export default function ProductPage({ params }: ProductPageProps) {
                 
                 {competitors.length ? (
                   <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
-                    {competitors.map((relation) => (
-                      <div key={relation.id} className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
-                        
-                        <div className="flex flex-col flex-grow">
-                          <span className="text-sm font-medium">{relation.competitor?.name || "Unknown Competitor"}</span>
-                          {relation.competitor?.metadata?.url && (
-                            <a 
-                              href={relation.competitor.metadata.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-xs text-blue-500 hover:underline"
-                            >
-                              {relation.competitor.metadata.url}
-                            </a>
+                    {competitors.map((relation) => {
+                      const isEditingThisCompetitor = relation.competitor && editingCompetitorId === relation.competitor.id;
+                      
+                      return (
+                        <div key={relation.id} className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-1" />
+                          
+                          {isEditingThisCompetitor && editedCompetitor ? (
+                            <div className="flex-grow">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                                <div>
+                                  <Label htmlFor={`comp-name-${relation.id}`} className="text-xs mb-1">Name</Label>
+                                  <Input
+                                    id={`comp-name-${relation.id}`}
+                                    value={editedCompetitor.name}
+                                    onChange={(e) => setEditedCompetitor({...editedCompetitor, name: e.target.value})}
+                                    placeholder="Competitor name"
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`comp-url-${relation.id}`} className="text-xs mb-1">URL</Label>
+                                  <Input
+                                    id={`comp-url-${relation.id}`}
+                                    value={editedCompetitor.metadata?.url || ''}
+                                    onChange={(e) => handleCompetitorMetadataChange('url', e.target.value)}
+                                    placeholder="https://competitor.com"
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end space-x-2">
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={handleCancelCompetitorEdit}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  type="button" 
+                                  variant="default" 
+                                  size="sm" 
+                                  onClick={handleSaveCompetitorEdit}
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-col flex-grow">
+                                <span className="text-sm font-medium">{relation.competitor?.name || "Unknown Competitor"}</span>
+                                {relation.competitor?.metadata?.url && (
+                                  <a 
+                                    href={relation.competitor.metadata.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-xs text-blue-500 hover:underline"
+                                  >
+                                    {relation.competitor.metadata.url}
+                                  </a>
+                                )}
+                              </div>
+                              
+                              {isEditing && (
+                                <div className="flex space-x-1">
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2"
+                                    onClick={() => handleEditCompetitor(relation)}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2 text-destructive hover:text-destructive/90"
+                                    onClick={() => handleRemoveCompetitor(relation.id)}
+                                  >
+                                    <span className="sr-only">Remove</span>
+                                    <AlertCircle className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
-                        
-                        {isEditing && (
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-destructive hover:text-destructive/90"
-                            onClick={() => handleRemoveCompetitor(relation.id)}
-                          >
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No competitors added yet</p>
