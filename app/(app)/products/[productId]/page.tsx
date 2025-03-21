@@ -254,14 +254,14 @@ export default function ProductPage({ params }: ProductPageProps) {
       
       console.log("Testing Trustpilot scraper for domain:", domain);
       
-      // Call the Trustpilot server action
-      const results = await getTrustpilotReviews(domain);
+      // Call the Trustpilot server action with product ID to store reviews in database
+      const results = await getTrustpilotReviews(domain, params.productId);
       
       // Log the complete results to console
       console.log("Trustpilot Reviews Results:", results);
       
       if (results.success) {
-        alert(`Successfully fetched ${results.data?.length || 0} Trustpilot reviews. Check the console for details.`);
+        alert(`Successfully fetched and stored ${results.data?.length || 0} Trustpilot reviews. Check the console for details.`);
       } else {
         alert(`Error fetching Trustpilot reviews: ${results.error}`);
       }
@@ -452,22 +452,22 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div className="space-y-2">
                   <Label htmlFor="trustpilot">Trustpilot URL</Label>
                   <div className="flex flex-col space-y-2">
-                    {isEditing ? (
-                      <Input
-                        id="trustpilot"
-                        value={product.metadata.trustpilot_url || ''}
-                        onChange={(e) => handleMetadataChange('trustpilot_url', e.target.value)}
-                        placeholder="https://trustpilot.com/review/your-product"
-                      />
-                    ) : (
+                  {isEditing ? (
+                    <Input
+                      id="trustpilot"
+                      value={product.metadata.trustpilot_url || ''}
+                      onChange={(e) => handleMetadataChange('trustpilot_url', e.target.value)}
+                      placeholder="https://trustpilot.com/review/your-product"
+                    />
+                  ) : (
                       <div className="flex justify-between items-center">
-                        <p className="text-sm text-muted-foreground">
-                          {product.metadata.trustpilot_url ? (
-                            <a href={product.metadata.trustpilot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                              {product.metadata.trustpilot_url}
-                            </a>
-                          ) : "No Trustpilot URL added"}
-                        </p>
+                    <p className="text-sm text-muted-foreground">
+                      {product.metadata.trustpilot_url ? (
+                        <a href={product.metadata.trustpilot_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                          {product.metadata.trustpilot_url}
+                        </a>
+                      ) : "No Trustpilot URL added"}
+                    </p>
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -478,9 +478,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                           Test Trustpilot
                         </Button>
                       </div>
-                    )}
-                  </div>
+                  )}
                 </div>
+              </div>
               </div>
               
               {/* Product Resources */}

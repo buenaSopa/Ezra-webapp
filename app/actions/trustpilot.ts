@@ -1,15 +1,20 @@
 'use server'
 
 import { ApifyClient } from 'apify-client';
+import { createClient } from '@/app/utils/supabase/server';
+import { reviewSources } from '@/schema/review_sources';
+import { products } from '@/schema/products';
 
 /**
  * Server action to fetch Trustpilot reviews for a company
  * @param companyWebsite The website of the company to fetch reviews for
+ * @param productId The ID of the product to associate reviews with
  * @param filterByVerified Whether to filter reviews by verified status
  * @returns The scraped Trustpilot reviews
  */
 export async function getTrustpilotReviews(
 	companyWebsite: string,
+	productId?: string,
 	filterByVerified: boolean = true
 ) {
 	try {
@@ -40,6 +45,11 @@ export async function getTrustpilotReviews(
 		// Fetch Actor results from the run's dataset
 		const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
+		// Store reviews in database if productId is provided
+		if (productId) {
+			await storeReviewsInDatabase(items, productId);
+		}
+
 		return {
 			success: true,
 			data: items,
@@ -51,5 +61,82 @@ export async function getTrustpilotReviews(
 			success: false,
 			error: error instanceof Error ? error.message : 'Unknown error occurred'
 		};
+	}
+}
+
+/**
+ * Normalizes and stores Trustpilot reviews in the database
+ * @param reviews The raw Trustpilot reviews from Apify
+ * @param productId The ID of the product to associate reviews with
+ */
+async function storeReviewsInDatabase(reviews: any[], productId: string) {
+	try {
+		const supabase = createClient();
+		
+		// First, delete all existing reviews for this product from Trustpilot
+		// This implements the "delete and replace" approach we agreed on
+		await supabase
+			.from('review_sources')
+			.delete()
+			.match({ 
+				product_id: productId,
+				source: 'trustpilot'
+			});
+		
+		// Log a sample review date for debugging
+		if (reviews.length > 0) {
+			console.log('Sample review date format:', reviews[0].reviewDate);
+			console.log('Sample review object:', JSON.stringify(reviews[0], null, 2));
+		}
+		
+		// Normalize and prepare the reviews for insertion
+		const normalizedReviews = reviews.map(review => {
+			return {
+				productId: productId, // Use TypeScript camelCase property names
+				source: 'trustpilot',
+				sourceId: review.reviewId,
+				reviewText: review.reviewDescription || '',
+				reviewTitle: review.reviewTitle || '',
+				rating: review.reviewRatingScore,
+				// Store the original date string without parsing
+				reviewDate: review.reviewDate || '',
+				reviewerName: review.reviewer || '',
+				verified: review.isReviewVerified || false,
+				sourceData: review
+			};
+		});
+		
+		// However, with direct Supabase queries, we need to use the database column names
+		const { error } = await supabase
+			.from('review_sources')
+			.insert(normalizedReviews.map(review => ({
+				product_id: review.productId,
+				source: review.source,
+				source_id: review.sourceId,
+				review_text: review.reviewText,
+				review_title: review.reviewTitle,
+				rating: review.rating,
+				review_date: review.reviewDate,
+				reviewer_name: review.reviewerName,
+				verified: review.verified,
+				source_data: review.sourceData
+			})));
+			
+		if (error) {
+			console.error('Error storing reviews in database:', error);
+			throw error;
+		}
+		
+		// Update the lastReviewsScrapedAt timestamp on the product
+		await supabase
+			.from('products')
+			.update({ lastReviewsScrapedAt: new Date().toISOString() })
+			.eq('id', productId);
+			
+		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for product ${productId}`);
+		
+	} catch (error) {
+		console.error('Error in storeReviewsInDatabase:', error);
+		throw error;
 	}
 } 

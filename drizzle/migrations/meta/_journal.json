@@ -43,6 +43,13 @@
       "when": 1742483989254,
       "tag": "0005_gifted_zodiak",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1742485029835,
+      "tag": "0006_tough_newton_destine",
+      "breakpoints": true
     }
   ]
 }
