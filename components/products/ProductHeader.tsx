@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, MessageSquare, ExternalLink } from "lucide-react";
+import { Edit, MessageSquare, ExternalLink, RefreshCw } from "lucide-react";
 
 interface ProductHeaderProps {
   product: {
     id: string;
     name: string;
     created_at: string;
+    last_reviews_scraped_at?: string;
     metadata: {
       url?: string;
       [key: string]: any;
@@ -19,6 +20,8 @@ interface ProductHeaderProps {
   onSave: () => void;
   onCancel: () => void;
   onStartChat: () => void;
+  onRefreshReviews?: () => void;
+  isRefreshingReviews?: boolean;
   onInputChange: (field: string, value: string) => void;
   onMetadataChange: (field: string, value: any) => void;
 }
@@ -31,9 +34,40 @@ export function ProductHeader({
   onSave,
   onCancel,
   onStartChat,
+  onRefreshReviews,
+  isRefreshingReviews = false,
   onInputChange,
   onMetadataChange
 }: ProductHeaderProps) {
+  // Format the last reviews scraped date
+  const formatLastScrapedDate = () => {
+    if (!product.last_reviews_scraped_at) return null;
+    
+    try {
+      const date = new Date(product.last_reviews_scraped_at);
+      // Check if date is valid
+      if (isNaN(date.getTime())) return null;
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return 'Reviews updated today';
+      } else if (diffDays === 1) {
+        return 'Reviews updated yesterday';
+      } else if (diffDays < 7) {
+        return `Reviews updated ${diffDays} days ago`;
+      } else {
+        return `Reviews last updated on ${date.toLocaleDateString()}`;
+      }
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const lastScrapedText = formatLastScrapedDate();
+
   return (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-4">
@@ -69,25 +103,40 @@ export function ProductHeader({
         </div>
       </div>
       
-      <div className="flex flex-col sm:flex-row gap-2">
-        {isEditing ? (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button onClick={onSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Button variant="outline" onClick={onEdit}>
-              <Edit className="h-4 w-4 mr-2" /> Edit Product
-            </Button>
-            <Button onClick={onStartChat}>
-              <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
-            </Button>
-          </>
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
+          {isEditing ? (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button onClick={onSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-2" /> Edit Product
+              </Button>
+              {onRefreshReviews && (
+                <Button 
+                  variant="outline" 
+                  onClick={onRefreshReviews} 
+                  disabled={isRefreshingReviews}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
+                  {isRefreshingReviews ? "Refreshing..." : "Refresh Reviews"}
+                </Button>
+              )}
+              <Button onClick={onStartChat}>
+                <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
+              </Button>
+            </>
+          )}
+        </div>
+        {!isEditing && lastScrapedText && (
+          <p className="text-xs text-muted-foreground">{lastScrapedText}</p>
         )}
       </div>
     </div>

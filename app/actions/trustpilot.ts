@@ -10,7 +10,7 @@ import { products } from '@/schema/products';
  * @param companyWebsite The website of the company to fetch reviews for
  * @param productId The ID of the product to associate reviews with
  * @param filterByVerified Whether to filter reviews by verified status
- * @param forceRefresh Force a fresh scrape even if reviews are less than a week old
+ * @param forceRefresh Force a fresh scrape regardless of cache status
  * @returns The scraped Trustpilot reviews
  */
 export async function getTrustpilotReviews(
@@ -20,45 +20,6 @@ export async function getTrustpilotReviews(
 	forceRefresh: boolean = false
 ) {
 	try {
-		// Check if we have recent reviews in the database (less than a week old)
-		if (productId && !forceRefresh) {
-			const supabase = createClient();
-			const { data: product } = await supabase
-				.from('products')
-				.select('last_reviews_scraped_at')
-				.eq('id', productId)
-				.single();
-
-				
-			if (product?.last_reviews_scraped_at) {
-				const lastScraped = new Date(product.last_reviews_scraped_at);
-				const oneWeekAgo = new Date();
-				oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-				
-				// If reviews were scraped less than a week ago, return from database
-				if (lastScraped > oneWeekAgo) {
-					console.log('Using cached Trustpilot reviews from previous scrape (less than a week old)');
-					
-					// Fetch reviews from database
-					const { data: reviewsData } = await supabase
-						.from('review_sources')
-						.select('*')
-						.eq('product_id', productId)
-						.eq('source', 'trustpilot');
-					
-					// Extract sourceData from each review
-					const reviews = reviewsData?.map(review => review.source_data) || [];
-					
-					return {
-						success: true,
-						data: reviews,
-						fromCache: true,
-						cacheDate: lastScraped.toISOString()
-					};
-				}
-			}
-		}
-
 		// Initialize the ApifyClient with your API token from environment variable
 		const client = new ApifyClient({
 			token: process.env.APIFY_API_TOKEN,
@@ -170,13 +131,7 @@ async function storeReviewsInDatabase(reviews: any[], productId: string) {
 			throw error;
 		}
 		
-		// Update the lastReviewsScrapedAt timestamp on the product
-		await supabase
-			.from('products')
-			.update({ last_reviews_scraped_at: new Date().toISOString() })
-			.eq('id', productId);
-			
-		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for product ${productId}. Updated lastReviewsScrapedAt to ${new Date().toISOString()}`);
+		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for product ${productId}`);
 		
 	} catch (error) {
 		console.error('Error in storeReviewsInDatabase:', error);

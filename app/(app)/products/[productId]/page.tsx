@@ -14,6 +14,8 @@ import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { getTrustpilotReviews } from "@/app/actions/trustpilot";
 import { getAmazonReviews } from "@/app/actions/amazon";
+import { refreshAllReviews } from "@/app/services/reviewService";
+import { toast } from "sonner";
 
 // Import custom components
 import { ProductHeader } from "@/components/products/ProductHeader";
@@ -65,6 +67,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [competitors, setCompetitors] = useState<ProductCompetitor[]>([]);
@@ -466,6 +469,52 @@ export default function ProductPage({ params }: ProductPageProps) {
     alert("Image upload functionality not implemented yet");
   };
 
+  const handleRefreshAllReviews = async () => {
+    if (!product) return;
+    
+    setIsRefreshingReviews(true);
+    try {
+      const results = await refreshAllReviews(params.productId, true);
+      console.log("All reviews refresh results:", results);
+      
+      if (results.success) {
+        if (results.fromCache) {
+          // Format for Sonner toast
+          toast.info(
+            `Reviews were last refreshed on ${
+              results.cacheDate ? new Date(results.cacheDate).toLocaleString() : 'unknown date'
+            }`,
+            { description: "Using cached reviews" }
+          );
+        } else {
+          // Format a summary of what happened
+          const sourcesText = results.sources.map(source => 
+            `${source.name}: ${source.success ? 'Success' : 'Failed'}`
+          ).join(', ');
+          
+          // Format for Sonner toast
+          toast.success("Successfully refreshed reviews", {
+            description: sourcesText
+          });
+        }
+      } else {
+        // Format for Sonner toast
+        toast.error("Error refreshing reviews", {
+          description: results.error || "An unknown error occurred"
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing reviews:", error);
+      
+      // Format for Sonner toast
+      toast.error("Error refreshing reviews", {
+        description: error instanceof Error ? error.message : "An unknown error occurred"
+      });
+    } finally {
+      setIsRefreshingReviews(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container max-w-6xl mx-auto p-6 flex items-center justify-center h-[80vh]">
@@ -510,6 +559,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         onSave={handleSaveProduct}
         onCancel={() => setIsEditing(false)}
         onStartChat={handleStartChat}
+        onRefreshReviews={handleRefreshAllReviews}
+        isRefreshingReviews={isRefreshingReviews}
         onInputChange={handleInputChange}
         onMetadataChange={handleMetadataChange}
       />
