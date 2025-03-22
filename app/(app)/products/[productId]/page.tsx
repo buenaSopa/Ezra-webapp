@@ -174,6 +174,11 @@ export default function ProductPage({ params }: ProductPageProps) {
   const handleMetadataChange = (field: string, value: any) => {
     if (!product) return;
     
+    // Special handling for amazon_asin field - ensure it's always trimmed
+    if (field === 'amazon_asin' && typeof value === 'string') {
+      value = value.trim();
+    }
+    
     setProduct({ 
       ...product, 
       metadata: { 
@@ -444,7 +449,14 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
     
     try {
-      const asin = product.metadata.amazon_asin;
+      // Ensure ASIN is trimmed
+      const asin = product.metadata.amazon_asin.trim();
+      
+      // Update the product with trimmed ASIN if needed
+      if (asin !== product.metadata.amazon_asin) {
+        handleMetadataChange('amazon_asin', asin);
+      }
+      
       console.log("Testing Amazon review scraper for ASIN:", asin);
       
       // Call the Amazon reviews server action with product ID to get reviews

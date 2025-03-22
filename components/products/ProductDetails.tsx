@@ -78,8 +78,14 @@ export function ProductDetails({
             <Input
               id="amazonAsin"
               value={product.metadata.amazon_asin || ''}
-              onChange={(e) => onMetadataChange('amazon_asin', e.target.value)}
+              onChange={(e) => onMetadataChange('amazon_asin', e.target.value.trim())}
               placeholder="Enter Amazon ASIN"
+              onBlur={(e) => {
+                // Also trim on blur to clean up any spaces
+                if (e.target.value !== e.target.value.trim()) {
+                  onMetadataChange('amazon_asin', e.target.value.trim());
+                }
+              }}
             />
           ) : (
             <div className="flex justify-between items-center">
