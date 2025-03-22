@@ -16,6 +16,9 @@ export async function getAmazonReviews(
 	maxReviews: number = 10
 ) {
 	try {
+		// Trim the ASIN to handle spaces before or after
+		const trimmedAsin = asin.trim();
+		
 		// Initialize the ApifyClient with your API token from environment variable
 		const client = new ApifyClient({
 			token: process.env.APIFY_API_TOKEN,
@@ -23,7 +26,7 @@ export async function getAmazonReviews(
 
 		const input = {
 			"ASIN_or_URL": [
-				asin
+				trimmedAsin
 			],
 			"filter_by_ratings": [
 				"all_stars"
@@ -53,7 +56,7 @@ export async function getAmazonReviews(
 		// Fetch Actor results from the run's dataset
 		const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-		console.log(`Fetched ${items.length} Amazon reviews for ASIN: ${asin}`);
+		console.log(`Fetched ${items.length} Amazon reviews for ASIN: ${trimmedAsin}`);
 
 		// Store reviews in database if productId is provided
 		if (productId) {

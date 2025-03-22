@@ -85,8 +85,10 @@ export async function refreshAllReviews(productId: string, forceRefresh = false)
   // 2. Amazon Scraper (if product has an ASIN)
   if (product.metadata?.amazon_asin) {
     scrapingTasks.push(runScraper('amazon', async () => {
+      // Ensure the ASIN is trimmed to handle any accidental spaces
+      const asin = product.metadata.amazon_asin.trim();
       // Use a higher max reviews value to get more comprehensive results
-      return await fetchAmazonReviews(product.metadata.amazon_asin, productId, 10);
+      return await fetchAmazonReviews(asin, productId, 10);
     }));
   }
 
