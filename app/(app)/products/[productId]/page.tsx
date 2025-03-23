@@ -481,12 +481,12 @@ export default function ProductPage({ params }: ProductPageProps) {
     alert("Image upload functionality not implemented yet");
   };
 
-  const handleRefreshAllReviews = async () => {
+  const handleRefreshAllReviews = async (includeCompetitors = false) => {
     if (!product) return;
     
     setIsRefreshingReviews(true);
     try {
-      const results = await refreshAllReviews(params.productId, true);
+      const results = await refreshAllReviews(params.productId, true, includeCompetitors);
       console.log("All reviews refresh results:", results);
       
       if (results.success) {
@@ -504,10 +504,21 @@ export default function ProductPage({ params }: ProductPageProps) {
             `${source.name}: ${source.success ? 'Success' : 'Failed'}`
           ).join(', ');
           
-          // Format for Sonner toast
-          toast.success("Successfully refreshed reviews", {
-            description: sourcesText
-          });
+          // If competitors were included, show additional information
+          if (includeCompetitors && results.competitorResults && results.competitorResults.length > 0) {
+            const successfulCompetitors = results.competitorResults.filter(c => c.success).length;
+            const totalCompetitors = results.competitorResults.length;
+            
+            // Format for Sonner toast with competitor info
+            toast.success(`Reviews refreshed for ${product.name} and ${successfulCompetitors}/${totalCompetitors} competitors`, {
+              description: sourcesText
+            });
+          } else {
+            // Format for Sonner toast - main product only
+            toast.success("Successfully refreshed reviews", {
+              description: sourcesText
+            });
+          }
         }
       } else {
         // Format for Sonner toast
@@ -573,6 +584,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         onStartChat={handleStartChat}
         onRefreshReviews={handleRefreshAllReviews}
         isRefreshingReviews={isRefreshingReviews}
+        competitorCount={competitors.length}
         onInputChange={handleInputChange}
         onMetadataChange={handleMetadataChange}
       />
