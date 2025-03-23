@@ -20,8 +20,9 @@ interface ProductHeaderProps {
   onSave: () => void;
   onCancel: () => void;
   onStartChat: () => void;
-  onRefreshReviews?: () => void;
+  onRefreshReviews?: (includeCompetitors?: boolean) => void;
   isRefreshingReviews?: boolean;
+  competitorCount?: number;
   onInputChange: (field: string, value: string) => void;
   onMetadataChange: (field: string, value: any) => void;
 }
@@ -36,6 +37,7 @@ export function ProductHeader({
   onStartChat,
   onRefreshReviews,
   isRefreshingReviews = false,
+  competitorCount = 0,
   onInputChange,
   onMetadataChange
 }: ProductHeaderProps) {
@@ -67,6 +69,7 @@ export function ProductHeader({
   };
 
   const lastScrapedText = formatLastScrapedDate();
+  const hasCompetitors = competitorCount > 0;
 
   return (
     <div className="flex items-center justify-between mb-6">
@@ -120,14 +123,27 @@ export function ProductHeader({
                 <Edit className="h-4 w-4 mr-2" /> Edit Product
               </Button>
               {onRefreshReviews && (
-                <Button 
-                  variant="outline" 
-                  onClick={onRefreshReviews} 
-                  disabled={isRefreshingReviews}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
-                  {isRefreshingReviews ? "Refreshing..." : "Refresh Reviews"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => onRefreshReviews(false)} 
+                    disabled={isRefreshingReviews}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
+                    Refresh Reviews
+                  </Button>
+                  
+                  {hasCompetitors && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => onRefreshReviews(true)} 
+                      disabled={isRefreshingReviews}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
+                      Refresh All ({competitorCount + 1})
+                    </Button>
+                  )}
+                </div>
               )}
               <Button onClick={onStartChat}>
                 <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
