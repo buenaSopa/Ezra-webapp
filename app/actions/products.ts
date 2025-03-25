@@ -11,7 +11,6 @@ type Competitor = {
   name: string
   url: string
   amazonAsin?: string
-  trustpilotUrl?: string
 }
 
 type Resource = {
@@ -24,7 +23,6 @@ type CreateProductParams = {
   name: string
   url: string
   amazonAsin?: string
-  trustpilotUrl?: string
   competitors: Competitor[]
   resources: Resource[]
 }
@@ -33,7 +31,6 @@ export async function createProduct({
   name,
   url,
   amazonAsin,
-  trustpilotUrl,
   competitors,
   resources,
 }: CreateProductParams) {
@@ -43,7 +40,6 @@ export async function createProduct({
       name,
       url,
       amazonAsin,
-      trustpilotUrl,
       competitors,
       resources
     }, null, 2));
@@ -67,7 +63,6 @@ export async function createProduct({
         metadata: {
           url,
           amazon_asin: amazonAsin,
-          trustpilot_url: trustpilotUrl,
           is_competitor: false
         }
       })
@@ -99,7 +94,6 @@ export async function createProduct({
             metadata: {
               url: competitor.url,
               amazon_asin: competitor.amazonAsin,
-              trustpilot_url: competitor.trustpilotUrl,
               is_competitor: true,
               competitor_for: productId
             }

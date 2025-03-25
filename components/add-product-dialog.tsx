@@ -31,7 +31,6 @@ type Competitor = {
   name: string;
   url: string;
   amazonAsin?: string;
-  trustpilotUrl?: string;
   files: File[];
   isAdditionalInfoOpen?: boolean;
 }
@@ -156,19 +155,16 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       const productName = formData.get("productName") as string
       const productUrl = formData.get("productUrl") as string
       const productAmazonAsin = formData.get("productAmazonAsin") as string
-      const productTrustpilotUrl = formData.get("productTrustpilotUrl") as string
       
       // Prepare data for API call
       const productData = {
         name: productName,
         url: productUrl,
         amazonAsin: productAmazonAsin || undefined,
-        trustpilotUrl: productTrustpilotUrl || undefined,
         competitors: competitors.filter(c => c.name && c.url).map(c => ({
           name: c.name,
           url: c.url,
           amazonAsin: c.amazonAsin,
-          trustpilotUrl: c.trustpilotUrl
         })),
         resources: resources.filter(r => r.title && (r.url || r.file)).map(r => ({
           type: r.type,
@@ -361,17 +357,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
               />
             </div>
             <div className="grid gap-2">
-              <label htmlFor="productTrustpilotUrl" className="text-sm font-medium">
-                Trustpilot URL (optional)
-              </label>
-              <Input
-                id="productTrustpilotUrl"
-                name="productTrustpilotUrl"
-                type="url"
-                placeholder="https://www.trustpilot.com/review/example.com"
-              />
-            </div>
-            <div className="grid gap-2">
               <label className="text-sm font-medium">
                 Product Files
               </label>
@@ -481,15 +466,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                           value={competitor.amazonAsin || ''}
                           onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
                           placeholder="B00EXAMPLE"
-                        />
-                      </div>
-                      <div className="grid gap-1">
-                        <label className="text-sm">Trustpilot URL (optional)</label>
-                        <Input
-                          type="url"
-                          value={competitor.trustpilotUrl || ''}
-                          onChange={(e) => handleCompetitorChange(index, 'trustpilotUrl', e.target.value)}
-                          placeholder="https://www.trustpilot.com/review/competitor.com"
                         />
                       </div>
                       <div className="grid gap-1">
