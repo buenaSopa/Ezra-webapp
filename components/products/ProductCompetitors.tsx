@@ -66,27 +66,11 @@ export function ProductCompetitors({
         <Label>Competitors</Label>
         {isEditing && (
           <div className="flex space-x-2">
-            <select 
-              className="text-sm rounded border p-1"
-              onChange={(e) => {
-                if (e.target.value) {
-                  onAddCompetitor(e.target.value);
-                  e.target.value = ""; // Reset after selection
-                }
-              }}
-            >
-              <option value="">Select competitor...</option>
-              {availableProducts.map(prod => (
-                <option key={prod.id} value={prod.id}>
-                  {prod.name}
-                </option>
-              ))}
-            </select>
             <Button 
               type="button" 
               variant="outline" 
               size="sm"
-              onClick={() => router.push('/products/new')}
+              onClick={() => console.log('new competitor')}
             >
               <Plus className="h-3.5 w-3.5 mr-1" /> New Competitor
             </Button>
