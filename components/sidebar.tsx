@@ -45,7 +45,7 @@ export function Sidebar() {
               </Link>
               <AddProductIcon />
             </div>
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Link href="/products/magic-soap" className="block">
                 <Button variant="ghost" className="w-full justify-start">
                   <FileText className="mr-2 h-4 w-4" />
@@ -70,7 +70,7 @@ export function Sidebar() {
                   Face Toner
                 </Button>
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </SidebarContent>

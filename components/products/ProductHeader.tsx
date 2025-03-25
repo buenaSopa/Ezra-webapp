@@ -124,15 +124,6 @@ export function ProductHeader({
               </Button>
               {onRefreshReviews && (
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => onRefreshReviews(false)} 
-                    disabled={isRefreshingReviews}
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
-                    Refresh Reviews
-                  </Button>
-                  
                   {hasCompetitors && (
                     <Button 
                       variant="outline" 
