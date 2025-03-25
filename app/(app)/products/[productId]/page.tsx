@@ -633,10 +633,10 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onCompetitorMetadataChange={handleCompetitorMetadataChange}
               />
 
-              <ProductImage 
+              {/* <ProductImage 
                 imageUrl={product.metadata.image_url} 
                 onUpload={handleImageUpload} 
-              />
+              /> */}
             </CardContent>
           </Card>
         </TabsContent>

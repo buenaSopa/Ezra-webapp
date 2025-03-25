@@ -97,40 +97,10 @@ export function ProductDetails({
                   </>
                 ) : "No Amazon ASIN added"}
               </p>
-              {onTestAmazon && product.metadata.amazon_asin && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onTestAmazon}
-                  className="flex items-center gap-1"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                  Test Amazon
-                </Button>
-              )}
             </div>
           )}
         </div>
       </div>
-      
-      {/* Trustpilot section - only visible in view mode */}
-      {!isEditing && (
-        <div className="flex justify-between items-center mt-4 p-3 bg-muted/30 rounded-md">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Label className="font-medium text-sm m-0">Trustpilot Reviews</Label>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onTestTrustpilot}
-            className="flex items-center gap-1"
-          >
-            <Search className="h-3.5 w-3.5" />
-            Test Trustpilot
-          </Button>
-        </div>
-      )}
     </div>
   );
 } 
