@@ -46,7 +46,7 @@ export default function ChatPage() {
       return "I can help generate ad variations to test different approaches. Some aspects we can vary include:\n\n• Headline approaches (question, statistic, direct benefit)\n• Tone (humorous, serious, inspirational)\n• Call-to-action phrasing\n• Value proposition emphasis\n\nWhich ad would you like me to create variations for?";
     }
     
-    return `Thanks for your message about "${message}". I'm your AI assistant for planning and creating ad content. I can help with writing scripts, building storyboards, generating ad variations, suggesting video concepts, and much more. How would you like me to help with your advertising project today?`;
+    return `test response, user message: ${message}`;
   };
 
   return (
