@@ -207,23 +207,59 @@ async function refreshSingleProduct(
 
   // 1. Trustpilot Scraper (if product has a URL)
   if (product.metadata?.url) {
-    scrapingTasks.push(runScraper('trustpilot', async () => {
-      return await fetchTrustpilotReviews(product.metadata.url, productId, true, forceRefresh);
-    }));
+    // Check if reviews already exist for this URL
+    const { data: existingTrustpilotReviews } = await supabase
+      .from('review_sources')
+      .select('count')
+      .eq('product_source', product.metadata.url)
+      .eq('source', 'trustpilot')
+      .single();
+
+    // Only scrape if we don't have reviews yet or forceRefresh is true
+    if (forceRefresh || !existingTrustpilotReviews || existingTrustpilotReviews.count === 0) {
+      scrapingTasks.push(runScraper('trustpilot', async () => {
+        return await fetchTrustpilotReviews(product.metadata.url, productId, true, forceRefresh);
+      }));
+    } else {
+      results.sources.push({
+        name: 'trustpilot',
+        success: true,
+        message: 'Using existing reviews from Trustpilot',
+        data: { reused: true }
+      });
+    }
   }
 
   // 2. Amazon Scraper (if product has an ASIN)
   if (product.metadata?.amazon_asin) {
     // Ensure the ASIN is trimmed to handle any accidental spaces
     const asin = product.metadata.amazon_asin.trim();
-    // Use a higher max reviews value to get more comprehensive results
-    scrapingTasks.push(runScraper('amazon', async () => {
-      return await fetchAmazonReviews(asin, productId, 10);
-    }));
+
+    // Check if reviews already exist for this ASIN
+    const { data: existingAmazonReviews } = await supabase
+      .from('review_sources')
+      .select('count')
+      .eq('product_source', asin)
+      .eq('source', 'amazon')
+      .single();
+
+    // Only scrape if we don't have reviews yet or forceRefresh is true
+    if (forceRefresh || !existingAmazonReviews || existingAmazonReviews.count === 0) {
+      scrapingTasks.push(runScraper('amazon', async () => {
+        return await fetchAmazonReviews(asin, productId, 10);
+      }));
+    } else {
+      results.sources.push({
+        name: 'amazon',
+        success: true,
+        message: 'Using existing reviews from Amazon',
+        data: { reused: true }
+      });
+    }
   }
 
   // If no valid sources for this product, return early
-  if (scrapingTasks.length === 0) {
+  if (scrapingTasks.length === 0 && results.sources.length === 0) {
     return {
       sources: [{
         name: 'configuration',
@@ -258,7 +294,7 @@ async function refreshSingleProduct(
   });
 
   // Update the overall last_reviews_scraped_at if any source succeeded
-  if (results.errors < scrapingTasks.length) {
+  if (results.errors < results.sources.length) {
     await supabase
       .from('products')
       .update({ last_reviews_scraped_at: new Date().toISOString() })
@@ -288,4 +324,4 @@ async function runScraper(name: string, scraperFn: () => Promise<any>) {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-} 
+}

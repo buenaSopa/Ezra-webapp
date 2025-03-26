@@ -50,6 +50,34 @@
       "when": 1742485029835,
       "tag": "0006_tough_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1742989429613,
+      "tag": "0007_cheerful_microchip",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1742989636451,
+      "tag": "0008_unusual_polaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1742989663043,
+      "tag": "0009_numerous_sphinx",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1742990428443,
+      "tag": "0010_kind_masque",
+      "breakpoints": true
     }
   ]
 }

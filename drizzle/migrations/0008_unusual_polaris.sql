@@ -1,0 +1,1 @@
+ALTER TABLE "review_sources" DROP COLUMN IF EXISTS "review_date";

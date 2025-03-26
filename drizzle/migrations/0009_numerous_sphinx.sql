@@ -1,0 +1,1 @@
+ALTER TABLE "review_sources" ADD COLUMN "review_date" date;

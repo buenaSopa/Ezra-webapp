@@ -124,7 +124,7 @@ export function ProductHeader({
               </Button>
               {onRefreshReviews && (
                 <div className="flex gap-2">
-                  {hasCompetitors && (
+                  {(
                     <Button 
                       variant="outline" 
                       onClick={() => onRefreshReviews(true)} 

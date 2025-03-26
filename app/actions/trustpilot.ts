@@ -4,6 +4,7 @@ import { ApifyClient } from 'apify-client';
 import { createClient } from '@/app/utils/supabase/server';
 import { reviewSources } from '@/schema/review_sources';
 import { products } from '@/schema/products';
+import { parseReviewDate } from '@/lib/utils';
 
 /**
  * Server action to fetch Trustpilot reviews for a company
@@ -47,10 +48,8 @@ export async function getTrustpilotReviews(
 		// Fetch Actor results from the run's dataset
 		const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-		// Store reviews in database if productId is provided
-		if (productId) {
-			await storeReviewsInDatabase(items, productId);
-		}
+		// Store reviews in database - now using the URL as the primary identifier
+		await storeReviewsInDatabase(items, companyWebsite, productId);
 
 		return {
 			success: true,
@@ -71,19 +70,23 @@ export async function getTrustpilotReviews(
 /**
  * Normalizes and stores Trustpilot reviews in the database
  * @param reviews The raw Trustpilot reviews from Apify
- * @param productId The ID of the product to associate reviews with
+ * @param companyWebsite The URL of the company (productSource)
+ * @param productId Optional product ID for updating last_reviews_scraped_at
  */
-async function storeReviewsInDatabase(reviews: any[], productId: string) {
+async function storeReviewsInDatabase(
+	reviews: any[], 
+	companyWebsite: string,
+	productId?: string
+) {
 	try {
 		const supabase = createClient();
 		
-		// First, delete all existing reviews for this product from Trustpilot
-		// This implements the "delete and replace" approach we agreed on
+		// First, delete all existing Trustpilot reviews for this URL
 		await supabase
 			.from('review_sources')
 			.delete()
 			.match({ 
-				product_id: productId,
+				product_source: companyWebsite,
 				source: 'trustpilot'
 			});
 		
@@ -95,26 +98,29 @@ async function storeReviewsInDatabase(reviews: any[], productId: string) {
 		
 		// Normalize and prepare the reviews for insertion
 		const normalizedReviews = reviews.map(review => {
+			// Parse the date string into a proper Date object
+			const parsedDate = parseReviewDate(review.reviewDate, 'trustpilot');
+			
 			return {
-				productId: productId, // Use TypeScript camelCase property names
+				productSource: companyWebsite, // Store the URL directly
 				source: 'trustpilot',
 				sourceId: review.reviewId,
 				reviewText: review.reviewDescription || '',
 				reviewTitle: review.reviewTitle || '',
 				rating: review.reviewRatingScore,
-				// Store the original date string without parsing
-				reviewDate: review.reviewDate || '',
+				// Store as a standardized date
+				reviewDate: parsedDate ? parsedDate.toISOString().split('T')[0] : null, // YYYY-MM-DD format
 				reviewerName: review.reviewer || '',
 				verified: review.isReviewVerified || false,
 				sourceData: review
 			};
 		});
 		
-		// However, with direct Supabase queries, we need to use the database column names
+		// Insert with the new schema field names
 		const { error } = await supabase
 			.from('review_sources')
 			.insert(normalizedReviews.map(review => ({
-				product_id: review.productId,
+				product_source: review.productSource,
 				source: review.source,
 				source_id: review.sourceId,
 				review_text: review.reviewText,
@@ -131,7 +137,15 @@ async function storeReviewsInDatabase(reviews: any[], productId: string) {
 			throw error;
 		}
 		
-		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for product ${productId}`);
+		// If a product ID was provided, update its last_reviews_scraped_at
+		if (productId) {
+			await supabase
+				.from('products')
+				.update({ last_reviews_scraped_at: new Date().toISOString() })
+				.eq('id', productId);
+		}
+		
+		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for URL: ${companyWebsite}`);
 		
 	} catch (error) {
 		console.error('Error in storeReviewsInDatabase:', error);
