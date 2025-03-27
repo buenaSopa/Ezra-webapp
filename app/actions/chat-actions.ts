@@ -64,6 +64,106 @@ export async function createChatSession({
 }
 
 /**
+ * Update a chat session's title
+ */
+export async function updateChatSessionTitle({
+  sessionId,
+  title,
+}: {
+  sessionId: string;
+  title: string;
+}) {
+  try {
+    const supabase = createClient();
+
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("You must be logged in to update a chat session");
+    }
+
+    // Update the chat session title
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .update({ 
+        title,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", sessionId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating chat session title:", error);
+      throw new Error(`Failed to update chat session: ${error.message}`);
+    }
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Error in updateChatSessionTitle:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Delete a chat session and all its messages
+ */
+export async function deleteChatSession(sessionId: string) {
+  try {
+    const supabase = createClient();
+
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("You must be logged in to delete a chat session");
+    }
+
+    // First get the product ID so we can redirect back to it
+    const { data: session, error: fetchError } = await supabase
+      .from("chat_sessions")
+      .select("product_id")
+      .eq("id", sessionId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching session:", fetchError);
+      throw new Error(`Failed to fetch session: ${fetchError.message}`);
+    }
+
+    const productId = session.product_id;
+
+    // Delete all chat messages for this session first
+    const { error: messagesError } = await supabase
+      .from("chat_messages")
+      .delete()
+      .eq("session_id", sessionId);
+
+    if (messagesError) {
+      console.error("Error deleting chat messages:", messagesError);
+      throw new Error(`Failed to delete chat messages: ${messagesError.message}`);
+    }
+
+    // Then delete the chat session
+    const { error: sessionError } = await supabase
+      .from("chat_sessions")
+      .delete()
+      .eq("id", sessionId);
+
+    if (sessionError) {
+      console.error("Error deleting chat session:", sessionError);
+      throw new Error(`Failed to delete chat session: ${sessionError.message}`);
+    }
+
+    return { success: true, productId };
+  } catch (error: any) {
+    console.error("Error in deleteChatSession:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Get a chat session by ID
  */
 export async function getChatSession(sessionId: string) {
