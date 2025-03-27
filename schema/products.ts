@@ -8,6 +8,7 @@ export const products = pgTable("products", {
   vectorDbIndexId: text("vector_db_index_id"),
   metadata: jsonb("metadata"), // Stores Amazon ASIN, Trustpilot URL, etc.
   lastReviewsScrapedAt: timestamp("last_reviews_scraped_at"),
+  lastIndexedAt: timestamp("last_indexed_at"), // When reviews were last indexed for RAG
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit, MessageSquare, ExternalLink, RefreshCw } from "lucide-react";
+import { IndexReviewsButton } from "./IndexReviewsButton";
 
 interface ProductHeaderProps {
   product: {
@@ -9,6 +10,7 @@ interface ProductHeaderProps {
     name: string;
     created_at: string;
     last_reviews_scraped_at?: string;
+    last_indexed_at?: string;
     metadata: {
       url?: string;
       [key: string]: any;
@@ -23,6 +25,7 @@ interface ProductHeaderProps {
   onRefreshReviews?: (includeCompetitors?: boolean) => void;
   isRefreshingReviews?: boolean;
   competitorCount?: number;
+  reviewCount?: number;
   onInputChange: (field: string, value: string) => void;
   onMetadataChange: (field: string, value: any) => void;
 }
@@ -38,6 +41,7 @@ export function ProductHeader({
   onRefreshReviews,
   isRefreshingReviews = false,
   competitorCount = 0,
+  reviewCount = 0,
   onInputChange,
   onMetadataChange
 }: ProductHeaderProps) {
@@ -68,7 +72,35 @@ export function ProductHeader({
     }
   };
 
+  // Format the last indexed date
+  const formatLastIndexedDate = () => {
+    if (!product.last_indexed_at) return null;
+    
+    try {
+      const date = new Date(product.last_indexed_at);
+      // Check if date is valid
+      if (isNaN(date.getTime())) return null;
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return 'Reviews indexed today';
+      } else if (diffDays === 1) {
+        return 'Reviews indexed yesterday';
+      } else if (diffDays < 7) {
+        return `Reviews indexed ${diffDays} days ago`;
+      } else {
+        return `Reviews last indexed on ${date.toLocaleDateString()}`;
+      }
+    } catch (error) {
+      return null;
+    }
+  };
+
   const lastScrapedText = formatLastScrapedDate();
+  const lastIndexedText = formatLastIndexedDate();
   const hasCompetitors = competitorCount > 0;
 
   return (
@@ -124,16 +156,18 @@ export function ProductHeader({
               </Button>
               {onRefreshReviews && (
                 <div className="flex gap-2">
-                  {(
-                    <Button 
-                      variant="outline" 
-                      onClick={() => onRefreshReviews(true)} 
-                      disabled={isRefreshingReviews}
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
-                      Refresh All ({competitorCount + 1})
-                    </Button>
-                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => onRefreshReviews(true)} 
+                    disabled={isRefreshingReviews}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
+                    Refresh All ({competitorCount + 1})
+                  </Button>
+                  <IndexReviewsButton 
+                    productId={product.id} 
+                    reviewCount={reviewCount}
+                  />
                 </div>
               )}
               <Button onClick={onStartChat}>
@@ -142,8 +176,11 @@ export function ProductHeader({
             </>
           )}
         </div>
-        {!isEditing && lastScrapedText && (
-          <p className="text-xs text-muted-foreground">{lastScrapedText}</p>
+        {!isEditing && (
+          <div className="text-xs text-muted-foreground space-y-1">
+            {lastScrapedText && <p>{lastScrapedText}</p>}
+            {lastIndexedText && <p>{lastIndexedText}</p>}
+          </div>
         )}
       </div>
     </div>

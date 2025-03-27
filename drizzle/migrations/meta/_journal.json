@@ -78,6 +78,13 @@
       "when": 1742990428443,
       "tag": "0010_kind_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1743084246330,
+      "tag": "0011_violet_invisible_woman",
+      "breakpoints": true
     }
   ]
 }

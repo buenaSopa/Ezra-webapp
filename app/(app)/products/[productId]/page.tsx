@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { getTrustpilotReviews } from "@/app/actions/trustpilot";
 import { getAmazonReviews } from "@/app/actions/amazon";
 import { refreshAllReviews } from "@/app/services/reviewService";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 
 // Import custom components
 import { ProductHeader } from "@/components/products/ProductHeader";
@@ -48,6 +48,8 @@ interface Product {
   id: string;
   name: string;
   created_at: string;
+  last_reviews_scraped_at?: string;
+  last_indexed_at?: string;
   metadata: ProductMetadata;
 }
 
@@ -74,6 +76,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
   const [editedCompetitor, setEditedCompetitor] = useState<Product | null>(null);
+  const [reviewCount, setReviewCount] = useState<number>(0);
   
   // Fetch product data when component mounts
   useEffect(() => {
@@ -97,6 +100,85 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     fetchProduct();
   }, [params.productId, supabase]);
+  
+  // Fetch review count
+  useEffect(() => {
+    const fetchReviewCount = async () => {
+      if (!params.productId || !product) return;
+      
+      // Count direct reviews linked to product_id
+      const { count: directCount, error: directError } = await supabase
+        .from("reviews")
+        .select("*", { count: 'exact', head: true })
+        .eq("product_id", params.productId);
+      
+      if (directError) {
+        console.error("Error fetching direct review count:", directError);
+      }
+      
+      // Get product metadata for URL and ASIN matching
+      const productUrl = product.metadata?.url;
+      const amazonAsin = product.metadata?.amazon_asin;
+      
+      let sourceReviewCount = 0;
+      
+      // If we have a product URL, count Trustpilot reviews
+      if (productUrl) {
+        try {
+          // Extract domain from URL for Trustpilot matching
+          let domain = productUrl;
+          try {
+            const url = new URL(domain);
+            domain = url.hostname;
+          } catch (error) {
+            // If URL parsing fails, just use the raw value
+            console.warn("Failed to parse URL for domain extraction:", error);
+          }
+          
+          const { count: trustpilotCount, error: trustpilotError } = await supabase
+            .from("review_sources")
+            .select("*", { count: 'exact', head: true })
+            .eq("product_source", domain)
+            .eq("source", "trustpilot");
+          
+          if (trustpilotError) {
+            console.error("Error fetching Trustpilot review count:", trustpilotError);
+          } else if (trustpilotCount !== null) {
+            sourceReviewCount += trustpilotCount;
+          }
+        } catch (error) {
+          console.error("Error processing Trustpilot reviews:", error);
+        }
+      }
+      
+      // If we have an Amazon ASIN, count Amazon reviews
+      if (amazonAsin) {
+        try {
+          const { count: amazonCount, error: amazonError } = await supabase
+            .from("review_sources")
+            .select("*", { count: 'exact', head: true })
+            .eq("product_source", amazonAsin)
+            .eq("source", "amazon");
+          
+          if (amazonError) {
+            console.error("Error fetching Amazon review count:", amazonError);
+          } else if (amazonCount !== null) {
+            sourceReviewCount += amazonCount;
+          }
+        } catch (error) {
+          console.error("Error processing Amazon reviews:", error);
+        }
+      }
+      
+      // Combine the counts
+      const totalCount = (directCount || 0) + sourceReviewCount;
+      setReviewCount(totalCount);
+      
+      console.log(`Total review count: ${totalCount} (Direct: ${directCount || 0}, Source: ${sourceReviewCount})`);
+    };
+    
+    fetchReviewCount();
+  }, [params.productId, supabase, product]);
   
   // Add new effect to fetch competitors
   useEffect(() => {
@@ -574,6 +656,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   return (
     <div className="container max-w-6xl mx-auto p-6 h-full overflow-y-auto">
+      <Toaster position="top-right" />
       <ProductHeader
         product={product}
         isEditing={isEditing}
@@ -585,6 +668,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         onRefreshReviews={handleRefreshAllReviews}
         isRefreshingReviews={isRefreshingReviews}
         competitorCount={competitors.length}
+        reviewCount={reviewCount}
         onInputChange={handleInputChange}
         onMetadataChange={handleMetadataChange}
       />
