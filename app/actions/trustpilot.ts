@@ -48,8 +48,10 @@ export async function getTrustpilotReviews(
 		// Fetch Actor results from the run's dataset
 		const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-		// Store reviews in database - now using the URL as the primary identifier
-		await storeReviewsInDatabase(items, companyWebsite, productId);
+		// Store reviews in database if productId is provided
+		if (productId) {
+			await storeReviewsInDatabase(items, productId);
+		}
 
 		return {
 			success: true,
@@ -70,23 +72,19 @@ export async function getTrustpilotReviews(
 /**
  * Normalizes and stores Trustpilot reviews in the database
  * @param reviews The raw Trustpilot reviews from Apify
- * @param companyWebsite The URL of the company (productSource)
- * @param productId Optional product ID for updating last_reviews_scraped_at
+ * @param productId The ID of the product to associate reviews with
  */
-async function storeReviewsInDatabase(
-	reviews: any[], 
-	companyWebsite: string,
-	productId?: string
-) {
+async function storeReviewsInDatabase(reviews: any[], productId: string) {
 	try {
 		const supabase = createClient();
 		
-		// First, delete all existing Trustpilot reviews for this URL
+		// First, delete all existing reviews for this product from Trustpilot
+		// This implements the "delete and replace" approach we agreed on
 		await supabase
 			.from('review_sources')
 			.delete()
 			.match({ 
-				product_source: companyWebsite,
+				product_id: productId,
 				source: 'trustpilot'
 			});
 		
@@ -102,7 +100,7 @@ async function storeReviewsInDatabase(
 			const parsedDate = parseReviewDate(review.reviewDate, 'trustpilot');
 			
 			return {
-				productSource: companyWebsite, // Store the URL directly
+				productId: productId, // Use TypeScript camelCase property names
 				source: 'trustpilot',
 				sourceId: review.reviewId,
 				reviewText: review.reviewDescription || '',
@@ -116,11 +114,11 @@ async function storeReviewsInDatabase(
 			};
 		});
 		
-		// Insert with the new schema field names
+		// However, with direct Supabase queries, we need to use the database column names
 		const { error } = await supabase
 			.from('review_sources')
 			.insert(normalizedReviews.map(review => ({
-				product_source: review.productSource,
+				product_id: review.productId,
 				source: review.source,
 				source_id: review.sourceId,
 				review_text: review.reviewText,
@@ -137,15 +135,7 @@ async function storeReviewsInDatabase(
 			throw error;
 		}
 		
-		// If a product ID was provided, update its last_reviews_scraped_at
-		if (productId) {
-			await supabase
-				.from('products')
-				.update({ last_reviews_scraped_at: new Date().toISOString() })
-				.eq('id', productId);
-		}
-		
-		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for URL: ${companyWebsite}`);
+		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for product ${productId}`);
 		
 	} catch (error) {
 		console.error('Error in storeReviewsInDatabase:', error);

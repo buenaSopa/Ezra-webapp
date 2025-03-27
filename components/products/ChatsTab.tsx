@@ -1,27 +1,72 @@
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
+import { getProductChatSessions } from "@/app/actions/chat-actions";
+import { Spinner } from "@/components/ui/spinner";
 
 interface ChatSession {
   id: string;
   title: string;
-  preview: string;
-  createdAt: string; // ISO date string
+  session_type: string;
+  created_at: string;
 }
 
 interface ChatsTabProps {
+  productId: string;
   productName: string;
-  chatSessions: ChatSession[];
   onStartChat: () => void;
   onOpenChat?: (sessionId: string) => void;
 }
 
+export default function DefaultChatsTab({ 
+  productId,
+  productName, 
+  onStartChat 
+}: ChatsTabProps) {
+  const handleOpenChat = (sessionId: string) => {
+    window.location.href = `/chat/${sessionId}`;
+  };
+
+  return (
+    <ChatsTab
+      productId={productId}
+      productName={productName}
+      onStartChat={onStartChat}
+      onOpenChat={handleOpenChat}
+    />
+  );
+}
+
 export function ChatsTab({
+  productId,
   productName,
-  chatSessions = [],
   onStartChat,
   onOpenChat
 }: ChatsTabProps) {
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchChatSessions = async () => {
+      try {
+        const result = await getProductChatSessions(productId);
+        if (!result.success) {
+          throw new Error(result.error || "Failed to fetch chat sessions");
+        }
+        setChatSessions(result.data);
+      } catch (err: any) {
+        console.error("Error fetching chat sessions:", err);
+        setError("Failed to load chat sessions");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChatSessions();
+  }, [productId]);
+
   // Format date to be more readable
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -30,6 +75,18 @@ export function ChatsTab({
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  // Get a preview/excerpt for the chat session
+  const getChatSessionPreview = (sessionType: string) => {
+    const previewMap: Record<string, string> = {
+      "general": "General conversation about the product",
+      "analysis": "Analysis of product features and performance",
+      "marketing_angle": "Marketing angle and positioning discussion",
+      "script_generation": "Script generation for product advertisement"
+    };
+
+    return previewMap[sessionType] || "Chat about this product";
   };
 
   return (
@@ -42,7 +99,15 @@ export function ChatsTab({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {chatSessions.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Spinner size="md" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">
+              <p>{error}</p>
+            </div>
+          ) : chatSessions.length > 0 ? (
             chatSessions.map(session => (
               <Card 
                 key={session.id} 
@@ -56,10 +121,10 @@ export function ChatsTab({
                   <div>
                     <h3 className="font-medium text-foreground">{session.title}</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {session.preview}
+                      {getChatSessionPreview(session.session_type)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Created on {formatDate(session.createdAt)}
+                      Created on {formatDate(session.created_at)}
                     </p>
                   </div>
                 </div>
@@ -81,29 +146,3 @@ export function ChatsTab({
     </Card>
   );
 }
-
-// Example usage with mock data
-export default function DefaultChatsTab({ productName, onStartChat }: { productName: string, onStartChat: () => void }) {
-  const mockChatSessions: ChatSession[] = [
-    {
-      id: "1",
-      title: `${productName} reduces your Tan lines`,
-      preview: `I've been using the ${productName} for a week now, and I can already see a reduction in my tan lines.`,
-      createdAt: "2023-05-15T12:00:00Z"
-    },
-    {
-      id: "2",
-      title: `Competitor analysis: ${productName} vs alternatives`,
-      preview: `Analyzed how ${productName} compares to top 3 competitors in the market.`,
-      createdAt: "2023-04-28T12:00:00Z"
-    }
-  ];
-
-  return (
-    <ChatsTab 
-      productName={productName} 
-      chatSessions={mockChatSessions} 
-      onStartChat={onStartChat} 
-    />
-  );
-} 

@@ -647,7 +647,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         
         <TabsContent value="chats" className="pb-6">
           <DefaultChatsTab 
-            productName={product.name} 
+            productId={params.productId}
+            productName={product?.name || ""} 
             onStartChat={handleStartChat} 
           />
         </TabsContent>
