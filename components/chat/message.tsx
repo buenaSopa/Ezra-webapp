@@ -4,6 +4,7 @@ export interface MessageProps {
   content: string;
   role: "user" | "assistant";
   timestamp?: string;
+  metadata?: any; // Add optional metadata for sources and other contextual info
 }
 
 export function Message({ content, role }: MessageProps) {

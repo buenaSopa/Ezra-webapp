@@ -8,7 +8,8 @@ import {
   getChatSession, 
   getChatMessages, 
   updateChatSessionTitle,
-  deleteChatSession
+  deleteChatSession,
+  chatWithProductReviews
 } from "@/app/actions/chat-actions";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical } from "lucide-react";
@@ -105,16 +106,47 @@ export default function ChatPage({ params }: ChatPageProps) {
     setMessages((prev) => [...prev, userMessage]);
     setIsSending(true);
     
-    // Simulate a response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Format all messages for the RAG API
+      const chatMessages = [...messages, userMessage].map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      // Get the product ID from the chat session
+      const productId = chatSession?.product_id;
+      
+      // Call the RAG API with all messages
+      const response = await chatWithProductReviews(chatMessages, productId);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      // Create assistant response with source metadata
       const assistantMessage: MessageProps = {
-        content: getResponseForMessage(message),
-        role: "assistant"
+        content: response.message,
+        role: "assistant",
+        metadata: {
+          sources: response.sources
+        }
       };
       
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error in chat:", error);
+      
+      // Add error message as assistant response
+      const errorMessage: MessageProps = {
+        content: `I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+        role: "assistant"
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+      toast.error("Failed to generate response");
+    } finally {
       setIsSending(false);
-    }, 1000);
+    }
   };
 
   // Handle editing the chat title

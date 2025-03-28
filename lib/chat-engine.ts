@@ -7,10 +7,10 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	// Get Qdrant vector store
 	const qdrantVectorStore = getQdrantVectorStore();
 
-	const ctx = await storageContextFromDefaults({ vectorStore: qdrantVectorStore });
+	// const ctx = await storageContextFromDefaults({ vectorStore: qdrantVectorStore });
 
 	// Create index from the vector store
-	const index = await VectorStoreIndex.init({ storageContext: ctx });
+	const index = await VectorStoreIndex.fromVectorStore(qdrantVectorStore);
 
 	// Create retriever
 	const retriever = index.asRetriever({
@@ -20,5 +20,6 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	// Create and return the chat engine
 	return new ContextChatEngine({
 		retriever,
+		chatModel: llm
 	});
 }

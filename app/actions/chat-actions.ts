@@ -3,6 +3,8 @@
 import { createClient } from "@/app/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { OpenAI, MetadataMode } from "llamaindex";
+import { createChatEngine } from "@/lib/chat-engine";
 
 /**
  * Create a new chat session for a product
@@ -242,5 +244,56 @@ export async function getProductChatSessions(productId: string) {
   } catch (error: any) {
     console.error("Error in getProductChatSessions:", error);
     return { success: false, error: error.message, data: [] };
+  }
+}
+
+/**
+ * Chat with product reviews using RAG
+ */
+export async function chatWithProductReviews(
+  messages: { role: string; content: string }[],
+  productId?: string
+) {
+  try {
+    if (!messages || messages.length === 0) {
+      throw new Error("No messages provided");
+    }
+
+    // Get the last user message
+    const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
+    
+    if (!lastUserMessage) {
+      throw new Error("No user message found");
+    }
+
+    // Initialize LLM with gpt-4o-mini
+    const llm = new OpenAI({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+    });
+
+    // Create chat engine
+    const chatEngine = await createChatEngine(llm, productId);
+
+    // Chat using the appropriate API format
+    const response = await chatEngine.chat({
+      message: lastUserMessage.content
+    });
+    
+    // Return the response
+    return {
+      message: response.response,
+      sources: response.sourceNodes?.map(node => ({
+        text: node.node.getContent(MetadataMode.NONE),
+        score: node.score,
+        metadata: node.node.metadata
+      }))
+    };
+  } catch (error) {
+    console.error("[RAG Chat Error]", error);
+    return {
+      message: "",
+      error: error instanceof Error ? error.message : "Unknown chat error"
+    };
   }
 }
