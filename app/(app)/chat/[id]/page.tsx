@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChatContainer } from "@/components/chat/chat-container";
 import { MessageProps } from "@/components/chat/message";
+import { Message } from "ai";
+import { useChat } from "@ai-sdk/react";
 import { 
   getChatSession, 
   getChatMessages, 
   updateChatSessionTitle,
   deleteChatSession,
-  chatWithProductReviews
 } from "@/app/actions/chat-actions";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical } from "lucide-react";
@@ -45,11 +46,10 @@ export default function ChatPage({ params }: ChatPageProps) {
   const router = useRouter();
   const { id } = params;
   
-  const [messages, setMessages] = useState<MessageProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [chatSession, setChatSession] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // State for edit mode
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -57,6 +57,26 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Initialize the AI SDK chat hook
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading: isSending,
+    setMessages,
+    error: chatError
+  } = useChat({
+    api: "/api/chat",
+    body: {
+      productId: chatSession?.product_id
+    },
+    onError: (err: Error) => {
+      console.error("Chat error:", err);
+      toast.error("Error generating response");
+    }
+  });
 
   // Load chat session and messages
   useEffect(() => {
@@ -77,14 +97,16 @@ export default function ChatPage({ params }: ChatPageProps) {
           throw new Error(messagesResult.error || "Failed to load chat messages");
         }
         
-        // Convert to message props format
-        const formattedMessages = messagesResult.data.map((msg: any) => ({
+        // Convert to AI SDK Message format
+        const formattedMessages: Message[] = messagesResult.data.map((msg: any) => ({
+          id: msg.id || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           content: msg.content,
           role: msg.role,
-          metadata: msg.metadata,
         }));
         
+        // Set messages for the chat hook once we have them
         setMessages(formattedMessages);
+        setIsInitialized(true);
       } catch (err: any) {
         console.error("Error loading chat data:", err);
         setError(`Error: ${err.message}`);
@@ -94,59 +116,15 @@ export default function ChatPage({ params }: ChatPageProps) {
     };
     
     loadChatData();
-  }, [id]);
+  }, [id, setMessages]);
 
-  const handleSendMessage = async (message: string) => {
-    // Add user message to chat
-    const userMessage: MessageProps = {
-      content: message,
-      role: "user"
-    };
+  // Custom submit handler to intercept the form submission
+  const handleSendMessage = (formData: FormData) => {
+    const message = formData.get('message') as string;
+    if (!message?.trim()) return;
     
-    setMessages((prev) => [...prev, userMessage]);
-    setIsSending(true);
-    
-    try {
-      // Format all messages for the RAG API
-      const chatMessages = [...messages, userMessage].map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-      
-      // Get the product ID from the chat session
-      const productId = chatSession?.product_id;
-      
-      // Call the RAG API with all messages
-      const response = await chatWithProductReviews(chatMessages, productId);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      
-      // Create assistant response with source metadata
-      const assistantMessage: MessageProps = {
-        content: response.message,
-        role: "assistant",
-        metadata: {
-          sources: response.sources
-        }
-      };
-      
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Error in chat:", error);
-      
-      // Add error message as assistant response
-      const errorMessage: MessageProps = {
-        content: `I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
-        role: "assistant"
-      };
-      
-      setMessages((prev) => [...prev, errorMessage]);
-      toast.error("Failed to generate response");
-    } finally {
-      setIsSending(false);
-    }
+    // Pass to AI SDK's handleSubmit
+    handleSubmit(new Event('submit') as any);
   };
 
   // Handle editing the chat title
@@ -209,24 +187,12 @@ export default function ChatPage({ params }: ChatPageProps) {
     }
   };
 
-  // Helper function to generate responses based on prompts
-  const getResponseForMessage = (message: string): string => {
-    const lowerMsg = message.toLowerCase();
-    
-    if (lowerMsg.includes("script") || lowerMsg.includes("write")) {
-      return "I'd be happy to help you write an ad script! To create an effective script, I'll need some information:\n\n1. What's the product or service you're advertising?\n2. Who is your target audience?\n3. What's the key message or benefit you want to highlight?\n4. How long should the script be (15s, 30s, 60s)?\n\nOnce you provide these details, I can craft a compelling script for your campaign.";
-    }
-    
-    if (lowerMsg.includes("storyboard") || lowerMsg.includes("build")) {
-      return "Creating a storyboard is a great way to visualize your ad before production. Let's break this down into steps:\n\n1. First, let's clarify the key scenes you want to include\n2. For each scene, we'll describe the visuals, text overlays, and any voiceover\n3. We'll include timing for each segment\n\nWhat's the core concept of your ad that you'd like to storyboard?";
-    }
-    
-    if (lowerMsg.includes("variation") || lowerMsg.includes("generate")) {
-      return "I can help generate ad variations to test different approaches. Some aspects we can vary include:\n\n• Headline approaches (question, statistic, direct benefit)\n• Tone (humorous, serious, inspirational)\n• Call-to-action phrasing\n• Value proposition emphasis\n\nWhich ad would you like me to create variations for?";
-    }
-    
-    return `I'm here to help with your product "${chatSession?.products?.name}". What would you like to know about it?`;
-  };
+  // Convert AI SDK Messages to MessageProps for the ChatContainer
+  const adaptedMessages: MessageProps[] = messages.map((msg: Message) => ({
+    content: msg.content,
+    role: msg.role as "user" | "assistant",
+    metadata: msg.annotations?.length ? { sources: msg.annotations } : undefined
+  }));
 
   if (isLoading) {
     return (
@@ -348,9 +314,17 @@ export default function ChatPage({ params }: ChatPageProps) {
       {/* Adjust top padding to account for the header */}
       <div className="pt-16 h-full">
         <ChatContainer
-          messages={messages}
-          onSendMessage={handleSendMessage}
+          messages={adaptedMessages}
+          onSendMessage={(message) => {
+            if (message.trim()) {
+              // Set the message and trigger submission
+              handleInputChange({ target: { value: message } } as React.ChangeEvent<HTMLInputElement>);
+              handleSubmit(new Event('submit') as any);
+            }
+          }}
           isLoading={isSending}
+          inputValue={input}
+          onInputChange={handleInputChange}
         />
       </div>
     </div>

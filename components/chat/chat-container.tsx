@@ -8,13 +8,17 @@ interface ChatContainerProps {
   onSendMessage: (message: string) => void;
   isLoading?: boolean;
   title?: string;
+  inputValue?: string;
+  onInputChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }
 
 export function ChatContainer({ 
   messages, 
   onSendMessage, 
   isLoading = false, 
-  title = "EzraGPT"
+  title = "EzraGPT",
+  inputValue,
+  onInputChange
 }: ChatContainerProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -32,11 +36,11 @@ export function ChatContainer({
   }, [messages]);
 
   const defaultSuggestions = [
-    "Help me write a script",
-    "Help me build a storyboard",
-    "Generate ad variations",
-    "Suggest videos for my script",
-    "Help me pick ad concepts"
+    "How does this product compare to its competitors?",
+    "What are the most common complaints in reviews?",
+    "What features do customers like the most?",
+    "Summarize the reviews for me",
+    "What's the overall sentiment of reviews?"
   ];
 
   return (
@@ -45,8 +49,8 @@ export function ChatContainer({
       <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
-            <h2 className="text-2xl font-bold mb-4">Turn insights into scripts!</h2>
-            <p className="max-w-md">Ask anything to get started planning your ads.</p>
+            <h2 className="text-2xl font-bold mb-4">Chat with review insights!</h2>
+            <p className="max-w-md">Ask questions about the product reviews to understand customer feedback.</p>
           </div>
         ) : (
           messages.map((message, index) => (
@@ -85,7 +89,9 @@ export function ChatContainer({
         <ChatInput 
           onSend={handleSend} 
           disabled={isLoading} 
-          placeholder="Ask anything..."
+          placeholder="Ask about the product reviews..."
+          value={inputValue}
+          onChange={onInputChange}
         />
       </div>
     </div>
