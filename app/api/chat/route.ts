@@ -68,15 +68,6 @@ export async function POST(request: NextRequest) {
     console.log("[Chat API] Creating chat engine");
     const chatEngine = await createChatEngine(llm, productId);
     
-    // Format messages for LlamaIndex if needed
-    const llamaMessages = messages.slice(0, -1).map(msg => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content
-    }));
-    
-    let completedContent = '';
-    let sourceNodes: any[] = [];
-    
     // Get streaming response
     console.log("[Chat API] Getting streaming response");
     const stream = await chatEngine.chat({
@@ -84,61 +75,22 @@ export async function POST(request: NextRequest) {
       stream: true
     });
     
-    // When the stream completes, save the assistant message
+    // When the stream completes, just log the content
     const onCompletion = async (content: string) => {
       try {
-        console.log("[Chat API] Stream completed, saving assistant message");
-        
-        // Use the provided content parameter from the callback
-        const finalContent = content;
-        
-        // Try to get the source nodes from the last call (non-streaming)
-        try {
-          const lastResponse = await chatEngine.chat({
-            message: lastUserMessage.content,
-            stream: false
-          });
-          
-          if (lastResponse.sourceNodes && lastResponse.sourceNodes.length > 0) {
-            sourceNodes = lastResponse.sourceNodes;
-          }
-        } catch (error) {
-          console.error("[Chat API] Error getting source nodes:", error);
-        }
-        
-        // Process source nodes if available
-        let metadata = null;
-        if (sourceNodes.length > 0) {
-          console.log("[Chat API] Adding sources to metadata", { sourceCount: sourceNodes.length });
-          metadata = { 
-            sources: sourceNodes.map(node => ({
-              text: node.node.getContent(MetadataMode.NONE),
-              score: node.score,
-              metadata: node.node.metadata
-            }))
-          };
-          
-          // Add sources to the stream data
-          streamData.append({
-            sources: metadata.sources
-          });
-        }
-        
-        // Save the complete assistant message
+        console.log("[Chat API] Stream completed");
+        console.log("[Chat API] Full assistant response content:", content);
+
         await saveChatMessage({
           sessionId,
           role: "assistant",
-          content: finalContent,
-          metadata: metadata
+          content
         });
         
-        // Update chat session's updatedAt timestamp
-        await updateChatSessionTimestamp(sessionId);
-        
-        console.log("[Chat API] Closing stream data");
-        streamData.close();
       } catch (error) {
         console.error("[Chat API] Error in onCompletion:", error);
+      } finally {
+        streamData.close();
       }
     };
     
