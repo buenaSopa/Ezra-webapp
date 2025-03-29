@@ -141,4 +141,4 @@ export async function indexProductReviewsAction(productId: string) {
       error: error instanceof Error ? error.message : "Unknown error during indexing action" 
     };
   }
-} 
+}

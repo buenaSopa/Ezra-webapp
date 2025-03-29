@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 export interface MessageProps {
   content: string;
@@ -24,7 +25,17 @@ export function Message({ content, role, metadata }: MessageProps) {
             ? "bg-black text-white rounded-tr-none" 
             : "bg-gray-100 text-gray-800 rounded-tl-none"
         )}>
-          <div className="whitespace-pre-wrap text-sm">{content}</div>
+          <div className="text-sm">
+            {isUser ? (
+              <div className="whitespace-pre-line">{content}</div>
+            ) : (
+              <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 break-words">
+                <ReactMarkdown>
+                  {content}
+                </ReactMarkdown>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       

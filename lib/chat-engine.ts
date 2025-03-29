@@ -20,6 +20,6 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	// Create and return the chat engine
 	return new ContextChatEngine({
 		retriever,
-		chatModel: llm
+		chatModel: llm,
 	});
 }
