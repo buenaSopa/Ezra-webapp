@@ -297,3 +297,82 @@ export async function chatWithProductReviews(
     };
   }
 }
+
+/**
+ * Save a chat message to the database
+ */
+export async function saveChatMessage({
+  sessionId,
+  role,
+  content,
+  metadata
+}: {
+  sessionId: string;
+  role: string;
+  content: string;
+  metadata?: any;
+}) {
+  try {
+    console.log(`[saveChatMessage] Saving ${role} message for session ${sessionId}`, { contentLength: content.length, hasMetadata: !!metadata });
+    
+    const supabase = createClient();
+    
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.log("[saveChatMessage] Error: User not logged in");
+      throw new Error("You must be logged in to save chat messages");
+    }
+    
+    // Save the message to the database
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .insert({
+        session_id: sessionId,
+        role,
+        content,
+        metadata
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error("[saveChatMessage] Database error:", error);
+      throw new Error(`Failed to save chat message: ${error.message}`);
+    }
+    
+    console.log(`[saveChatMessage] Successfully saved ${role} message with ID: ${data.id}`);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("[saveChatMessage] Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update chat session's timestamp to reflect latest activity
+ */
+export async function updateChatSessionTimestamp(sessionId: string) {
+  try {
+    console.log(`[updateChatSessionTimestamp] Updating timestamp for session ${sessionId}`);
+    const supabase = createClient();
+    
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", sessionId)
+      .select();
+      
+    if (error) {
+      console.error("[updateChatSessionTimestamp] Error:", error);
+    } else {
+      console.log("[updateChatSessionTimestamp] Successfully updated timestamp");
+    }
+    
+    return { success: !error, error: error?.message };
+  } catch (error: any) {
+    console.error("[updateChatSessionTimestamp] Error:", error);
+    return { success: false, error: error.message };
+  }
+}

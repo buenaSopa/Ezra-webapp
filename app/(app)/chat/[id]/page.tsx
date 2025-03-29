@@ -10,7 +10,7 @@ import {
   getChatSession, 
   getChatMessages, 
   updateChatSessionTitle,
-  deleteChatSession,
+  deleteChatSession
 } from "@/app/actions/chat-actions";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical } from "lucide-react";
@@ -70,7 +70,8 @@ export default function ChatPage({ params }: ChatPageProps) {
   } = useChat({
     api: "/api/chat",
     body: {
-      productId: chatSession?.product_id
+      productId: chatSession?.product_id,
+      sessionId: id
     },
     onError: (err: Error) => {
       console.error("Chat error:", err);
