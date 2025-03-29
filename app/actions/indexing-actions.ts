@@ -44,24 +44,33 @@ export async function indexProductReviewsAction(productId: string) {
           console.warn("Failed to parse URL for domain extraction:", error);
         }
         
+        // Enhanced query to fetch more fields including review_title and source_data
         const { data: trustpilotReviews, error: trustpilotError } = await supabase
           .from("review_sources")
-          .select("id, source, review_text, rating, review_date, created_at")
+          .select("id, source, review_text, review_title, rating, review_date, reviewer_name, verified, source_data, created_at")
           .eq("product_source", domain)
           .eq("source", "trustpilot");
         
         if (trustpilotError) {
           console.error("Error fetching Trustpilot reviews:", trustpilotError);
         } else if (trustpilotReviews && trustpilotReviews.length > 0) {
-          // Format Trustpilot reviews for indexing
-          const formattedTrustpilotReviews: Review[] = trustpilotReviews.map(review => ({
-            id: review.id,
-            productId: productId,
-            text: review.review_text,
-            rating: review.rating,
-            source: review.source,
-            date: review.review_date || review.created_at,
-          }));
+          // Format Trustpilot reviews for indexing with enhanced data
+          const formattedTrustpilotReviews: Review[] = trustpilotReviews.map(review => {
+            const sourceData = review.source_data as any;
+            return {
+              id: review.id,
+              productId: productId,
+              text: review.review_text,
+              rating: review.rating,
+              source: review.source,
+              date: review.review_date || review.created_at,
+              // Enhanced fields
+              title: review.review_title || sourceData?.reviewTitle,
+              productTitle: sourceData?.companyName,
+              reviewerName: review.reviewer_name || sourceData?.reviewer,
+              verified: review.verified || sourceData?.isReviewVerified
+            };
+          });
           
           allReviews.push(...formattedTrustpilotReviews);
         }
@@ -73,24 +82,33 @@ export async function indexProductReviewsAction(productId: string) {
     // Fetch Amazon reviews if ASIN exists
     if (amazonAsin) {
       try {
+        // Enhanced query to fetch more fields including review_title and source_data
         const { data: amazonReviews, error: amazonError } = await supabase
           .from("review_sources")
-          .select("id, source, review_text, rating, review_date, created_at")
+          .select("id, source, review_text, review_title, rating, review_date, reviewer_name, verified, source_data, created_at")
           .eq("product_source", amazonAsin)
           .eq("source", "amazon");
         
         if (amazonError) {
           console.error("Error fetching Amazon reviews:", amazonError);
         } else if (amazonReviews && amazonReviews.length > 0) {
-          // Format Amazon reviews for indexing
-          const formattedAmazonReviews: Review[] = amazonReviews.map(review => ({
-            id: review.id,
-            productId: productId,
-            text: review.review_text,
-            rating: review.rating,
-            source: review.source,
-            date: review.review_date || review.created_at,
-          }));
+          // Format Amazon reviews for indexing with enhanced data
+          const formattedAmazonReviews: Review[] = amazonReviews.map(review => {
+            const sourceData = review.source_data as any;
+            return {
+              id: review.id,
+              productId: productId,
+              text: review.review_text,
+              rating: review.rating,
+              source: review.source,
+              date: review.review_date || review.created_at,
+              // Enhanced fields
+              title: review.review_title || sourceData?.ReviewTitle,
+              productTitle: sourceData?.ProductTitle,
+              reviewerName: review.reviewer_name || sourceData?.Reviewer,
+              verified: review.verified || (sourceData?.Verified === "True")
+            };
+          });
           
           allReviews.push(...formattedAmazonReviews);
         }

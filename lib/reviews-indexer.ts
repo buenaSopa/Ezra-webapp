@@ -13,23 +13,46 @@ export interface Review {
   rating: number;
   source: string;
   date: string;
+  // Enhanced fields for better embeddings
+  title?: string;
+  productTitle?: string;
+  reviewerName?: string;
+  verified?: boolean;
+}
+
+/**
+ * Creates enriched text for better semantic embeddings
+ */
+function createEnrichedEmbeddingText(review: Review, productName: string): string {
+  return `
+Product: ${review.productTitle || productName}
+${review.title ? `Title: ${review.title}` : ''}
+Rating: ${review.rating}/5
+${review.verified ? 'Verified Purchase' : ''}
+Review: ${review.text}
+`.trim();
 }
 
 export async function indexProductReviews(reviews: Review[], productName: string) {
   try {
     console.log(`Starting to index ${reviews.length} reviews for product: ${productName}`);
     
-    // Create Document objects for indexing
+    // Create Document objects for indexing with enriched text
     const documents = reviews.map(review => {
+      // Create enriched text that combines all relevant context
+      const enrichedText = createEnrichedEmbeddingText(review, productName);
+      
       return new Document({
-        text: review.text,
+        text: enrichedText,
         metadata: {
           productId: review.productId,
           productName: productName,
           reviewId: review.id,
           rating: review.rating,
           source: review.source,
-          date: review.date
+          date: review.date,
+          title: review.title,
+          verified: review.verified
         }
       });
     });
