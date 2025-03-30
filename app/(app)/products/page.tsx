@@ -159,12 +159,6 @@ export default async function ProductsPage() {
                                   <span>View</span>
                                 </a>
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <a href={`/products/${product.id}/edit`} className="flex items-center">
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  <span>Edit</span>
-                                </a>
-                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DeleteProductButton 
                                 productId={product.id} 
