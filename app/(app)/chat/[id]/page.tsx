@@ -73,6 +73,7 @@ export default function ChatPage({ params }: ChatPageProps) {
       productId: chatSession?.product_id,
       sessionId: id
     },
+    experimental_throttle: 100,
     onError: (err: Error) => {
       console.error("Chat error:", err);
       toast.error("Error generating response");
