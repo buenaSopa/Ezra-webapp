@@ -18,6 +18,7 @@ export interface Review {
   productTitle?: string;
   reviewerName?: string;
   verified?: boolean;
+  productSource?: string;
 }
 
 /**
@@ -52,7 +53,8 @@ export async function indexProductReviews(reviews: Review[], productName: string
           source: review.source,
           date: review.date,
           title: review.title,
-          verified: review.verified
+          verified: review.verified,
+          productSource: review.productSource
         }
       });
     });

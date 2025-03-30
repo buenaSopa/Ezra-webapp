@@ -68,7 +68,8 @@ export async function indexProductReviewsAction(productId: string) {
               title: review.review_title || sourceData?.reviewTitle,
               productTitle: sourceData?.companyName,
               reviewerName: review.reviewer_name || sourceData?.reviewer,
-              verified: review.verified || sourceData?.isReviewVerified
+              verified: review.verified || sourceData?.isReviewVerified,
+              productSource: domain
             };
           });
           
@@ -106,7 +107,8 @@ export async function indexProductReviewsAction(productId: string) {
               title: review.review_title || sourceData?.ReviewTitle,
               productTitle: sourceData?.ProductTitle,
               reviewerName: review.reviewer_name || sourceData?.Reviewer,
-              verified: review.verified || (sourceData?.Verified === "True")
+              verified: review.verified || (sourceData?.Verified === "True"),
+              productSource: amazonAsin
             };
           });
           
