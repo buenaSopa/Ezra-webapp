@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
   try {
     const { messages, productId, sessionId } = await request.json();
 
+    console.log(`[Chat API] chat messages: ${JSON.stringify(messages)}`);
+    
     console.log(`[Chat API] Received request for session ${sessionId}`, { 
       productId,
       messageCount: messages?.length
@@ -68,14 +70,19 @@ export async function POST(request: NextRequest) {
     console.log("[Chat API] Creating chat engine");
     const chatEngine = await createChatEngine(llm, productId);
     
-    // Get streaming response
+    // Convert the entire message history into a conversation string
+    // This creates a properly formatted context of the entire conversation
+    const conversationContext = formatMessageHistoryAsString(messages);
+    console.log("[Chat API] Formatted conversation context:", conversationContext);
+    
+    // Get streaming response with the full conversation context
     console.log("[Chat API] Getting streaming response");
     const stream = await chatEngine.chat({
-      message: lastUserMessage.content,
+      message: conversationContext,
       stream: true
     });
     
-    // When the stream completes, just log the content
+    // When the stream completes, just log the content and save it
     const onCompletion = async (content: string) => {
       try {
         console.log("[Chat API] Stream completed");
@@ -109,4 +116,36 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Format the message history array into a cohesive conversation string
+ * that provides better context for the LLM
+ */
+function formatMessageHistoryAsString(messages: Array<{role: string; content: string}>): string {
+  // Get the last user message which will be our query
+  const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
+  if (!lastUserMessage) return "";
+  
+  // Format all previous messages as context
+  const previousMessages = messages.slice(0, -1); // Exclude the last user message
+  
+  if (previousMessages.length === 0) {
+    // If there are no previous messages, just return the user query
+    return lastUserMessage.content;
+  }
+  
+  // Build conversation history string
+  let conversationHistory = "Below is a conversation history between a user and an AI assistant:\n\n";
+  
+  // Add previous messages as context
+  for (const msg of previousMessages) {
+    const roleLabel = msg.role === "user" ? "User" : "Assistant";
+    conversationHistory += `${roleLabel}: ${msg.content}\n\n`;
+  }
+  
+  // Add clear separator and the current query
+  conversationHistory += `User: ${lastUserMessage.content}\n\nAssistant:`;
+  
+  return conversationHistory;
 } 
