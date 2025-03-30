@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const { messages, productId, sessionId } = await request.json();
-    
+
     console.log(`[Chat API] Received request for session ${sessionId}`, { 
       productId,
       messageCount: messages?.length
