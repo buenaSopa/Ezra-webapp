@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { deleteProduct } from "@/app/actions/product-actions";
+import { deleteProduct } from "@/app/actions/products";
 import { useRouter } from "next/navigation";
 
 interface DeleteProductButtonProps {

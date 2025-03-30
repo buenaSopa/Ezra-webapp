@@ -160,6 +160,126 @@ export async function createProduct({
   }
 }
 
+
+/**
+ * Delete a product and all its related data
+ * This is a server action that handles the complete deletion process
+ */
+export async function deleteProduct(productId: string) {
+  const supabase = createClient();
+  
+  // Get the current user for authorization
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error("You must be logged in to delete a product");
+  }
+  
+  // Start a transaction by using multiple operations
+  // First, check if the product exists
+  const { data: product, error: fetchError } = await supabase
+    .from("products")
+    .select("id, name")
+    .eq("id", productId)
+    .single();
+  
+  if (fetchError) {
+    console.error("Error fetching product:", fetchError);
+    throw new Error(`Product not found: ${fetchError.message}`);
+  }
+  
+  // Get all chat sessions for this product
+  const { data: chatSessions, error: sessionsError } = await supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("product_id", productId);
+    
+  if (sessionsError) {
+    console.error("Error fetching chat sessions:", sessionsError);
+    throw new Error(`Failed to fetch chat sessions: ${sessionsError.message}`);
+  }
+  
+  console.log(`Found ${chatSessions?.length || 0} chat sessions to delete for product ${productId}`);
+  
+  // Delete all chat messages for each session
+  if (chatSessions && chatSessions.length > 0) {
+    for (const session of chatSessions) {
+      console.log(`Deleting chat messages for session ${session.id}`);
+      const { error: messagesError } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("session_id", session.id);
+        
+      if (messagesError) {
+        console.error(`Error deleting chat messages for session ${session.id}:`, messagesError);
+        throw new Error(`Failed to delete chat messages: ${messagesError.message}`);
+      }
+    }
+    
+    // Delete all chat sessions for this product
+    console.log(`Deleting ${chatSessions.length} chat sessions for product ${productId}`);
+    const { error: deleteSessionsError } = await supabase
+      .from("chat_sessions")
+      .delete()
+      .eq("product_id", productId);
+      
+    if (deleteSessionsError) {
+      console.error("Error deleting chat sessions:", deleteSessionsError);
+      throw new Error(`Failed to delete chat sessions: ${deleteSessionsError.message}`);
+    }
+  }
+  
+  // Delete related competitor relationships
+  const { error: competitorsError } = await supabase
+    .from("product_to_competitors")
+    .delete()
+    .eq("competitor_product_id", productId);
+  
+  if (competitorsError) {
+    console.error("Error deleting product competitor relationships:", competitorsError);
+    throw new Error(`Failed to delete product competitor relationships: ${competitorsError.message}`);
+  }
+  
+  // Also check for the reverse relationship where this product is a competitor to other products
+  const { error: reverseCompetitorsError } = await supabase
+    .from("product_to_competitors")
+    .delete()
+    .eq("product_id", productId);
+  
+  if (reverseCompetitorsError) {
+    console.error("Error deleting reverse competitor relationships:", reverseCompetitorsError);
+    throw new Error(`Failed to delete reverse competitor relationships: ${reverseCompetitorsError.message}`);
+  }
+  
+  // Delete related marketing resources
+  const { error: marketingResourcesError } = await supabase
+    .from("product_marketing_resources")
+    .delete()
+    .eq("product_id", productId);
+  
+  if (marketingResourcesError) {
+    console.error("Error deleting product marketing resources:", marketingResourcesError);
+    throw new Error(`Failed to delete product marketing resources: ${marketingResourcesError.message}`);
+  }
+  
+  // Finally delete the product itself
+  const { error: deleteError } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId);
+  
+  if (deleteError) {
+    console.error("Error deleting product:", deleteError);
+    throw new Error(`Failed to delete product: ${deleteError.message}`);
+  }
+  
+  // Revalidate the products page to reflect the changes
+  revalidatePath('/products');
+  
+  // Return success
+  return { success: true };
+}
+
 // Function to handle file uploads for marketing resources
 export async function uploadMarketingResourceFile(
   productId: string, 
