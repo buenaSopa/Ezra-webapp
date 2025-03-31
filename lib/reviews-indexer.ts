@@ -1,10 +1,12 @@
 import { 
   VectorStoreIndex, 
   storageContextFromDefaults,
-  Document
+  Document,
+  MetadataFilters
 } from "llamaindex";
 import { getQdrantVectorStore } from "./qdrant";
 import { createClient } from "@/app/utils/supabase/server";
+import { QdrantClient } from "@qdrant/js-client-rest";
 
 export interface Review {
   id: string;
@@ -20,6 +22,11 @@ export interface Review {
   verified?: boolean;
   productSource?: string;
 }
+
+
+const QDRANT_URL = process.env.QDRANT_URL;
+const QDRANT_API_KEY = process.env.QDRANT_CLOUD_API;
+const COLLECTION_NAME = process.env.QDRANT_COLLECTION_NAME || "Ezra";
 
 /**
  * Creates enriched text for better semantic embeddings
@@ -38,11 +45,38 @@ export async function indexProductReviews(reviews: Review[], productName: string
   try {
     console.log(`Starting to index ${reviews.length} reviews for product: ${productName}`);
     
+    // Get unique product sources from the reviews
+    const productSources = [...new Set(reviews.map(r => r.productSource))].filter(Boolean);
+    
+    // Initialize Qdrant client
+    const client = new QdrantClient({ 
+    url: QDRANT_URL,
+    apiKey: QDRANT_API_KEY 
+    });
+
+    // Delete existing vectors for these product sources
+    if (productSources.length > 0) {
+      console.log(`Deleting existing vectors for sources:`, productSources);
+      const deleteResult = await client.delete(COLLECTION_NAME, {
+        filter: {
+          must: [{
+            key: "productSource",
+            match: {
+              any: productSources
+            }
+          }]
+        }
+      });
+      
+      console.log('Deletion status:', {
+        status: deleteResult.status,
+        operationId: deleteResult.operation_id
+      });
+    }
+
     // Create Document objects for indexing with enriched text
     const documents = reviews.map(review => {
-      // Create enriched text that combines all relevant context
       const enrichedText = createEnrichedEmbeddingText(review, productName);
-      
       return new Document({
         text: enrichedText,
         metadata: {

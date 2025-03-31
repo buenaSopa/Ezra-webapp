@@ -218,7 +218,7 @@ async function refreshSingleProduct(
     const asin = product.metadata.amazon_asin.trim();
     // Use a higher max reviews value to get more comprehensive results
     scrapingTasks.push(runScraper('amazon', async () => {
-      return await fetchAmazonReviews(asin, productId, 10);
+      return await fetchAmazonReviews(asin, productId, 100);
     }));
   }
 

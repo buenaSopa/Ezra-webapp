@@ -1,5 +1,5 @@
 // lib/chat-engine.ts
-import { ContextChatEngine, LLM, storageContextFromDefaults, VectorStoreIndex } from "llamaindex";
+import { ContextChatEngine, LLM, MetadataFilters, storageContextFromDefaults, VectorStoreIndex } from "llamaindex";
 import { getQdrantVectorStore } from "./qdrant";
 
 export async function createChatEngine(llm: LLM, productId?: string) {
@@ -11,10 +11,18 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 
 	// Create index from the vector store
 	const index = await VectorStoreIndex.fromVectorStore(qdrantVectorStore);
+	const filters: MetadataFilters = {
+		filters: [{
+			key: "productId",
+			value: productId,
+			operator: "=="
+		}]
+	}
 
 	// Create retriever
 	const retriever = index.asRetriever({
-		similarityTopK: 20
+		similarityTopK: 50,
+		filters: filters
 	});
 
 	// Create and return the chat engine

@@ -27,7 +27,7 @@ export function IndexReviewsButton({ productId, reviewCount = 0 }: IndexReviewsB
   const handleIndexReviews = async () => {
     try {
       setIsIndexing(true);
-      toast.loading("Indexing reviews for RAG...");
+      toast.info("Indexing reviews for RAG...");
       
       const result = await indexProductReviewsAction(productId) as IndexingResult;
       

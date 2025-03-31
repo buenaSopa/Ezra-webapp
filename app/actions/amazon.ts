@@ -32,7 +32,7 @@ export async function getAmazonReviews(
 			"filter_by_ratings": [
 				"all_stars"
 			],
-			"max_reviews": 10,
+			"max_reviews": maxReviews,
 			"unique_only": false,
 			"country": "United States",
 			"End_date": "1990-01-01",
