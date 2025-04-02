@@ -28,6 +28,13 @@ interface ProductHeaderProps {
   reviewCount?: number;
   onInputChange: (field: string, value: string) => void;
   onMetadataChange: (field: string, value: any) => void;
+  scrapingStatus?: {
+    text: string;
+    color: string;
+    isReady: boolean;
+    subtext?: string;
+  };
+  hideIndexForRag?: boolean;
 }
 
 export function ProductHeader({
@@ -43,7 +50,9 @@ export function ProductHeader({
   competitorCount = 0,
   reviewCount = 0,
   onInputChange,
-  onMetadataChange
+  onMetadataChange,
+  scrapingStatus = { text: 'Ready', color: 'text-muted-foreground', isReady: true },
+  hideIndexForRag = false
 }: ProductHeaderProps) {
   // Format the last reviews scraped date
   const formatLastScrapedDate = () => {
@@ -164,14 +173,29 @@ export function ProductHeader({
                     <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
                     Refresh All ({competitorCount + 1})
                   </Button>
-                  <IndexReviewsButton 
-                    productId={product.id} 
-                    reviewCount={reviewCount}
-                  />
+                  {!hideIndexForRag && (
+                    <IndexReviewsButton 
+                      productId={product.id} 
+                      reviewCount={reviewCount}
+                    />
+                  )}
                 </div>
               )}
-              <Button onClick={onStartChat}>
-                <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
+              <Button 
+                onClick={onStartChat} 
+                disabled={!scrapingStatus.isReady}
+                className={!scrapingStatus.isReady ? `${scrapingStatus.color} border border-current bg-transparent hover:bg-transparent` : ''}
+              >
+                {!scrapingStatus.isReady ? (
+                  <>
+                    <span className={`w-2 h-2 rounded-full mr-2 ${scrapingStatus.color.replace('text-', 'bg-')}`}></span>
+                    {scrapingStatus.text}
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
+                  </>
+                )}
               </Button>
             </>
           )}
@@ -180,6 +204,7 @@ export function ProductHeader({
           <div className="text-xs text-muted-foreground space-y-1">
             {lastScrapedText && <p>{lastScrapedText}</p>}
             {lastIndexedText && <p>{lastIndexedText}</p>}
+            {scrapingStatus && !hideIndexForRag && <p className={scrapingStatus.text.includes('in progress') ? 'text-blue-500 font-medium' : ''}>{scrapingStatus.text}</p>}
           </div>
         )}
       </div>

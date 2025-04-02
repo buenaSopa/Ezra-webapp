@@ -5,6 +5,8 @@ import { cookies } from "next/headers"
 import { createClient } from "@/app/utils/supabase/server"
 import { products, productToCompetitors, productMarketingResources } from "@/schema/products"
 import { v4 as uuidv4 } from "uuid"
+import { getAmazonReviews } from "@/app/actions/amazon"
+import { startTrustpilotReviewScraping } from "@/app/actions/trustpilot"
 
 // Types for the action parameters
 type Competitor = {
@@ -148,6 +150,32 @@ export async function createProduct({
       } else {
         console.log('Resources created successfully:', insertedResources);
       }
+    }
+    
+    // --- Start: Trigger asynchronous review scraping ---
+    console.log(`Triggering background review scraping for product ${productId}...`);
+    try {
+      // Trigger Amazon scrape if ASIN exists
+      if (amazonAsin && amazonAsin.trim()) {
+        console.log(` -> Triggering Amazon scrape for ASIN: ${amazonAsin.trim()}`);
+        // Intentionally not awaited - fire and forget
+        getAmazonReviews(amazonAsin.trim(), productId);
+      } else {
+        console.log(" -> Skipping Amazon scrape (no ASIN provided).");
+      }
+
+      // Trigger Trustpilot scrape if URL exists
+      if (url && url.trim()) {
+        console.log(` -> Triggering Trustpilot scrape for URL: ${url.trim()}`);
+        // Intentionally not awaited - fire and forget
+        startTrustpilotReviewScraping(url.trim(), productId);
+      } else {
+        console.log(" -> Skipping Trustpilot scrape (no URL provided).");
+      }
+      console.log("Background scraping tasks initiated.");
+    } catch (scrapeError) {
+      // Log the error but don't fail the product creation process
+      console.error("Error initiating background scraping tasks:", scrapeError);
     }
     
     // Revalidate the products path to update the UI
@@ -363,4 +391,4 @@ export async function uploadMarketingResourceFile(
     console.error("Error in uploadMarketingResourceFile:", error)
     return { success: false, error: (error as Error).message }
   }
-} 
+}

@@ -13,7 +13,7 @@ import { parseReviewDate } from '@/lib/utils';
  */
 export async function getAmazonReviews(
 	asin: string,
-	productId?: string,
+	productId: string,
 	maxReviews: number = 10
 ) {
 	try {
@@ -25,47 +25,62 @@ export async function getAmazonReviews(
 			token: process.env.APIFY_API_TOKEN,
 		});
 
+		// Create a scraping job record
+		const { createScrapingJob } = await import('./scraping-jobs');
+		const jobResult = await createScrapingJob({
+			productId,
+			source: 'amazon',
+			sourceIdentifier: trimmedAsin,
+		});
+
+		// If there's already a running job, return early
+		if (!jobResult.success) {
+			return {
+				success: false,
+				error: jobResult.error,
+				message: "Could not start Amazon scraping job",
+				...(jobResult.jobId && { jobId: jobResult.jobId })
+			};
+		}
+
+		// Prepare the input for the scraping task
 		const input = {
-			"ASIN_or_URL": [
-				trimmedAsin
-			],
-			"filter_by_ratings": [
-				"all_stars"
-			],
+			"ASIN_or_URL": [trimmedAsin],
 			"max_reviews": maxReviews,
-			"unique_only": false,
 			"country": "United States",
-			"End_date": "1990-01-01",
-			"sort_reviews_by": [
-				"helpful",
-				"recent"
-			],
-			"filter_by_verified_purchase_only": [
-				"all_reviews",
-				"avp_only_reviews"
-			],
-			"filter_by_mediaType": [
-				"all_contents",
-				"media_reviews_only"
-			],
-			"filter_by_keywords": [],
+    		"End_date": "1990-01-01",
+			"sort_reviews_by": ["helpful","recent"],
+			"filter_by_verified_purchase_only": ["all_reviews","avp_only_reviews"],
 			"customData": {
 				"asin": trimmedAsin,
 				"productId": productId
+			},
+			"Proxy configuration": {
+				"useApifyProxy": false
 			}
 		};
 
-		// Set up the webhook for when the run succeeds
 
 		// Run the Actor asynchronously with webhook
 		const runInfo = await client.actor("8vhDnIX6dStLlGVr7").start(input);
+
+		// Update the scraping job with the actor run ID
+		const supabase = createClient();
+		await supabase
+			.from('scraping_jobs')
+			.update({
+				actor_run_id: runInfo.id,
+				updated_at: new Date().toISOString()
+			})
+			.eq('id', jobResult.jobId);
 
 		console.log(`Started Amazon review scrape for ASIN: ${trimmedAsin}. Run ID: ${runInfo.id}`);
 
 		return {
 			success: true,
 			message: `Amazon review scraping initiated for ASIN ${trimmedAsin}.`,
-			runId: runInfo.id
+			runId: runInfo.id,
+			jobId: jobResult.jobId
 		};
 	} catch (error) {
 		console.error('Error fetching Amazon reviews:', error);

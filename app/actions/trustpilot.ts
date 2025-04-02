@@ -28,9 +28,10 @@ export interface TrustpilotReview {
 /**
  * Server action to initiate Trustpilot review scraping via Apify
  * @param companyWebsite The website of the company to fetch reviews for
+ * @param productId The ID of the product associated with the review scraping
  * @returns Object containing success status and run information
  */
-export async function startTrustpilotReviewScraping(companyWebsite: string) {
+export async function startTrustpilotReviewScraping(companyWebsite: string, productId: string) {
 	try {
 		// Initialize the ApifyClient
 		const client = new ApifyClient({
@@ -46,6 +47,24 @@ export async function startTrustpilotReviewScraping(companyWebsite: string) {
 			console.warn("Failed to parse URL for domain extraction:", error);
 		}
 
+		// Create a scraping job record
+		const { createScrapingJob } = await import('./scraping-jobs');
+		const jobResult = await createScrapingJob({
+			productId,
+			source: 'trustpilot',
+			sourceIdentifier: domain,
+		});
+
+		// If there's already a running job, return early
+		if (!jobResult.success) {
+			return {
+				success: false,
+				error: jobResult.error,
+				message: "Could not start Trustpilot scraping job",
+				...(jobResult.jobId && { jobId: jobResult.jobId })
+			};
+		}
+
 		// Prepare Actor input
 		const input = {
 			"companyWebsite": companyWebsite,
@@ -58,23 +77,34 @@ export async function startTrustpilotReviewScraping(companyWebsite: string) {
 			"startFromPageNumber": 1,
 			"endAtPageNumber": 1,
 			"customData": {
-				"companyWebsite": domain
+				"companyWebsite": domain,
+				"productId": productId
 			},
 			"Proxy configuration": {
 				"useApifyProxy": false
 			}
 		};
 
-
 		// Start the Apify actor run
 		const runInfo = await client.actor("l3wcDhSSC96LBRUpc").start(input);
+
+		// Update the scraping job with the actor run ID
+		const supabase = createClient();
+		await supabase
+			.from('scraping_jobs')
+			.update({
+				actor_run_id: runInfo.id,
+				updated_at: new Date().toISOString()
+			})
+			.eq('id', jobResult.jobId);
 
 		console.log(`Started Trustpilot review scrape for URL ${companyWebsite}. Run ID: ${runInfo.id}`);
 
 		return {
 			success: true,
 			message: `Trustpilot review scraping initiated for URL ${companyWebsite}.`,
-			runId: runInfo.id
+			runId: runInfo.id,
+			jobId: jobResult.jobId
 		};
 	} catch (error) {
 		console.error('Error starting Trustpilot review scrape:', error);

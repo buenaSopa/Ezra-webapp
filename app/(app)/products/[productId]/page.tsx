@@ -8,7 +8,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,8 @@ import { startTrustpilotReviewScraping } from "@/app/actions/trustpilot";
 import { getAmazonReviews } from "@/app/actions/amazon";
 import { refreshAllReviews } from "@/app/services/reviewService";
 import { toast, Toaster } from "sonner";
+import useSWR from 'swr';
+import { getScrapingJobsForProduct } from '@/app/actions/scraping-jobs';
 
 // Import custom components
 import { ProductHeader } from "@/components/products/ProductHeader";
@@ -77,6 +79,81 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
   const [editedCompetitor, setEditedCompetitor] = useState<Product | null>(null);
   const [reviewCount, setReviewCount] = useState<number>(0);
+  
+  // Use SWR to fetch scraping job status and refresh automatically
+  const { data: scrapingData } = useSWR(
+    ['scraping-jobs', params.productId],
+    async () => {
+      const result = await getScrapingJobsForProduct(params.productId);
+      if (!result.success) {
+        return { jobs: [] };
+      }
+      return result;
+    },
+    { refreshInterval: 5000 } // Refresh every 5 seconds
+  );
+  
+  // Check if there are any running jobs
+  const hasRunningJobs = scrapingData?.jobs?.some(job => job.status === 'running') || false;
+  
+  // Determine the overall scraping status
+  const getScrapingStatus = () => {
+    if (!scrapingData || !scrapingData.jobs || scrapingData.jobs.length === 0) {
+      return {
+        text: 'Ready',
+        color: 'text-green-500',
+        isReady: true
+      };
+    }
+    
+    // Check for active jobs - prioritize any running/indexing jobs
+    const runningJob = scrapingData.jobs.find(job => 
+      job.status === 'running' || job.status === 'indexing' || job.status === 'queued'
+    );
+    
+    if (runningJob) {
+      if (runningJob.status === 'indexing') {
+        return {
+          text: 'Vectorizing...',
+          color: 'text-blue-500',
+          isReady: false
+        };
+      }
+      
+      return {
+        text: 'Loading...',
+        color: 'text-blue-500',
+        isReady: false
+      };
+    }
+    
+    // Check for recently completed jobs - any indexed job is good!
+    const indexed = scrapingData.jobs.some(job => job.status === 'indexed');
+    if (indexed) {
+      return {
+        text: 'Ready',
+        color: 'text-green-500',
+        isReady: true
+      };
+    }
+    
+    // Check for failed jobs
+    const failed = scrapingData.jobs.some(job => job.status === 'failed' || job.status === 'index_failed');
+    if (failed) {
+      return {
+        text: 'Warning',
+        color: 'text-amber-500',
+        isReady: true
+      };
+    }
+    
+    // Default - likely just 'completed' without indexing
+    return {
+      text: 'Ready',
+      color: 'text-green-500',
+      isReady: true
+    };
+  };
   
   // Fetch product data when component mounts
   useEffect(() => {
@@ -508,7 +585,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       console.log("Testing Trustpilot scraper for domain:", domain);
       
       // Call the Trustpilot server action with product ID to store reviews in database
-      const results = await startTrustpilotReviewScraping(domain);
+      const results = await startTrustpilotReviewScraping(domain, params.productId);
       
       // Log the complete results to console
       console.log("Trustpilot Reviews Results:", results);
@@ -661,6 +738,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         reviewCount={reviewCount}
         onInputChange={handleInputChange}
         onMetadataChange={handleMetadataChange}
+        scrapingStatus={getScrapingStatus()}
+        hideIndexForRag={true}
       />
 
       <Tabs defaultValue="details" className="w-full">

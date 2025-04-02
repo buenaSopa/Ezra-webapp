@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
 import { storeTrustpilotReviews, TrustpilotReview } from '@/app/actions/trustpilot';
 import { storeAmazonReviewsInDatabase } from '@/app/actions/amazon';
+import { indexProductReviewsAction } from '@/app/actions/indexing-actions';
 import crypto from 'crypto';
 
 // Constants
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     const result = await APIFY_CLIENT.dataset(datasetId).listItems();
     items = result.items;
     console.log(`Fetched ${items.length} items from dataset`);
-  } catch (error) {
+    } catch (error) {
     console.error("Failed to fetch dataset:", error);
     return NextResponse.json({ error: 'Failed to fetch dataset' }, { status: 500 });
   }
@@ -93,8 +94,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'No items to process' }, { status: 200 });
   }
 
+  // Import the scraping jobs functions
+  const { updateScrapingJobStatus } = await import('@/app/actions/scraping-jobs');
+
   // 6. Process based on actor type
   try {
+    let productId: string | null = null;
+    
     switch (actorId) {
       case ACTORS.TRUSTPILOT: {
         // Fetch the original input with customData from key-value store
@@ -107,19 +113,57 @@ export async function POST(request: NextRequest) {
         
         console.log("Input from key-value store:", JSON.stringify(input.value, null, 2));
         
-        // Extract companyWebsite from input - try customData first, then fall back to root
+        // Extract companyWebsite and productId from input
         const companyWebsite = input.value.customData?.companyWebsite;
+        productId = input.value.customData?.productId;
         
         if (!companyWebsite) {
           throw new Error("Missing companyWebsite in input customData");
         }
         
-        console.log(`Processing Trustpilot reviews for ${companyWebsite}`);
+        if (!productId) {
+          throw new Error("Missing productId in input customData");
+        }
+        
+        console.log(`Processing Trustpilot reviews for ${companyWebsite}, productId: ${productId}`);
         
         // Extract domain from URL for storage
         let domain = companyWebsite;
+        try {
+          domain = new URL(companyWebsite);
+        } catch (error) {
+          console.error("Error extracting domain from URL:", error);
+        }
         
+        // Store the reviews
         await storeTrustpilotReviews(items as unknown as TrustpilotReview[], domain);
+        
+        // Update the scraping job status to indexing
+        await updateScrapingJobStatus({
+          actorRunId: resource.id,
+          status: 'indexing'
+        });
+        
+        // Now trigger indexing
+        console.log(`Starting RAG indexing for productId: ${productId}`);
+        const indexingResult = await indexProductReviewsAction(productId);
+        console.log('Indexing result:', indexingResult);
+        
+        // Update the job status based on indexing result
+        if (indexingResult.success) {
+          await updateScrapingJobStatus({
+            actorRunId: resource.id,
+            status: 'indexed',
+            indexedAt: new Date().toISOString()
+          });
+        } else {
+          await updateScrapingJobStatus({
+            actorRunId: resource.id,
+            status: 'index_failed',
+            errorMessage: indexingResult.error || 'Unknown error during indexing'
+          });
+        }
+        
         break;
       }
       
@@ -134,7 +178,7 @@ export async function POST(request: NextRequest) {
         
         console.log("Input from key-value store:", JSON.stringify(input.value, null, 2));
         
-        // Extract ASIN from input - either directly or from ASIN_or_URL array
+        // Extract ASIN and productId from input
         let asin;
         if (input.value.customData?.asin) {
           asin = input.value.customData.asin;
@@ -149,12 +193,47 @@ export async function POST(request: NextRequest) {
           }
         }
         
+        productId = input.value.customData?.productId;
+        
         if (!asin) {
           throw new Error("Missing ASIN in input");
         }
         
-        console.log(`Processing Amazon reviews for ASIN ${asin}`);
+        if (!productId) {
+          throw new Error("Missing productId in input customData");
+        }
+        
+        console.log(`Processing Amazon reviews for ASIN ${asin}, productId: ${productId}`);
+        
+        // Store the reviews
         await storeAmazonReviewsInDatabase(items, asin);
+        
+        // Update the scraping job status to indexing
+        await updateScrapingJobStatus({
+          actorRunId: resource.id,
+          status: 'indexing'
+        });
+        
+        // Now trigger indexing
+        console.log(`Starting RAG indexing for productId: ${productId}`);
+        const indexingResult = await indexProductReviewsAction(productId);
+        console.log('Indexing result:', indexingResult);
+        
+        // Update the job status based on indexing result
+        if (indexingResult.success) {
+          await updateScrapingJobStatus({
+            actorRunId: resource.id,
+            status: 'indexed',
+            indexedAt: new Date().toISOString()
+          });
+        } else {
+          await updateScrapingJobStatus({
+            actorRunId: resource.id,
+            status: 'index_failed',
+            errorMessage: indexingResult.error || 'Unknown error during indexing'
+          });
+        }
+        
         break;
       }
 
@@ -163,14 +242,26 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Successfully processed webhook',
+      message: 'Successfully processed webhook and indexed reviews',
       processed: items.length
     }, { status: 200 });
 
   } catch (error) {
     console.error("Failed to process reviews:", error);
+    
+    // Update the scraping job status to failed
+    try {
+      await updateScrapingJobStatus({
+        actorRunId: resource?.id,
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error processing reviews'
+      });
+    } catch (updateError) {
+      console.error("Error updating scraping job status:", updateError);
+    }
+    
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Unknown error processing reviews'
     }, { status: 500 });
   }
-} 
+}

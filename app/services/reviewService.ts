@@ -208,7 +208,7 @@ async function refreshSingleProduct(
   // 1. Trustpilot Scraper (if product has a URL)
   if (product.metadata?.url) {
     scrapingTasks.push(runScraper('trustpilot', async () => {
-      return await fetchTrustpilotReviews(product.metadata.url);
+      return await fetchTrustpilotReviews(product.metadata.url, productId);
     }));
   }
 
