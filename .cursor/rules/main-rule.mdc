@@ -17,6 +17,7 @@ always use drizzle for database stuff
 always use shadcn component is possible
 use sonner for toast
 always check if any package is installed in component js and package.json
+before creating a new function, scan if there is existing functions to prevent duplications
 
 # Othe context
 - when modifying a component, take note that you are not allow to have states in server component
