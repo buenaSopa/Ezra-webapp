@@ -56,16 +56,9 @@ export async function getAmazonReviews(
 		};
 
 		// Set up the webhook for when the run succeeds
-		const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/apify`;
-		console.log(`Setting up webhook to: ${webhookUrl}`);
 
 		// Run the Actor asynchronously with webhook
-		const runInfo = await client.actor("8vhDnIX6dStLlGVr7").start(input, {
-			webhooks: [{
-				eventTypes: ["ACTOR.RUN.SUCCEEDED"],
-				requestUrl: webhookUrl
-			}]
-		});
+		const runInfo = await client.actor("8vhDnIX6dStLlGVr7").start(input);
 
 		console.log(`Started Amazon review scrape for ASIN: ${trimmedAsin}. Run ID: ${runInfo.id}`);
 
@@ -109,18 +102,46 @@ export async function storeAmazonReviewsInDatabase(reviews: any[], asin: string,
 		}
 		
 		// Normalize and prepare the reviews for insertion
-		const normalizedReviews = reviews.map(review => ({
-			product_source: asin,
-			source: 'amazon',
-			source_id: review.ReviewId,
-			review_text: review.ReviewText || '',
-			review_title: review.ReviewTitle || '',
-			rating: review.Rating,
-			review_date: review.ReviewDate,
-			reviewer_name: review.Reviewer || '',
-			verified: review.Verified === 'True',
-			source_data: review
-		}));
+		const normalizedReviews = reviews.map(review => {
+			// Generate a source_id if ParentId is missing
+			// Try to use different fields to create a unique ID
+			let sourceId = review.ParentId;
+			
+			if (!sourceId) {
+				// Use a combination of fields to create a unique ID if ParentId is missing
+				const reviewer = review.Reviewer || 'anonymous';
+				const reviewDate = review.ReviewDate || new Date().toISOString();
+				const reviewTitle = review.ReviewTitle || '';
+				sourceId = `amazon-${asin}-${reviewer}-${reviewDate}-${reviewTitle}`.replace(/\s+/g, '-');
+			}
+			
+			// Parse the review date for consistent formatting
+			let reviewDate = null;
+			if (review.ReviewDate) {
+				try {
+					// Try to parse various date formats
+					const date = new Date(review.ReviewDate);
+					if (!isNaN(date.getTime())) {
+						reviewDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+					}
+				} catch (error) {
+					console.warn(`Failed to parse review date: ${review.ReviewDate}`);
+				}
+			}
+			
+			return {
+				product_source: asin,
+				source: 'amazon',
+				source_id: sourceId,
+				review_text: review.ReviewContent || '',
+				review_title: review.ReviewTitle || '',
+				rating: parseFloat(review.ReviewScore) || 0,
+				review_date: reviewDate,
+				reviewer_name: review.Reviewer || '',
+				verified: review.Verified === 'True',
+				source_data: review
+			};
+		});
 		
 		// Insert the normalized reviews
 		const { error } = await supabase
