@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/app/utils/supabase/server';
-import { getTrustpilotReviews as fetchTrustpilotReviews } from '../actions/trustpilot';
+import { startTrustpilotReviewScraping as fetchTrustpilotReviews } from '../actions/trustpilot';
 import { getAmazonReviews as fetchAmazonReviews } from '../actions/amazon';
 
 // Define return type for the service to include all possible fields
@@ -208,7 +208,7 @@ async function refreshSingleProduct(
   // 1. Trustpilot Scraper (if product has a URL)
   if (product.metadata?.url) {
     scrapingTasks.push(runScraper('trustpilot', async () => {
-      return await fetchTrustpilotReviews(product.metadata.url, productId, true, forceRefresh);
+      return await fetchTrustpilotReviews(product.metadata.url);
     }));
   }
 

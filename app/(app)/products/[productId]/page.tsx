@@ -12,7 +12,7 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { getTrustpilotReviews } from "@/app/actions/trustpilot";
+import { startTrustpilotReviewScraping } from "@/app/actions/trustpilot";
 import { getAmazonReviews } from "@/app/actions/amazon";
 import { refreshAllReviews } from "@/app/services/reviewService";
 import { toast, Toaster } from "sonner";
@@ -508,16 +508,11 @@ export default function ProductPage({ params }: ProductPageProps) {
       console.log("Testing Trustpilot scraper for domain:", domain);
       
       // Call the Trustpilot server action with product ID to store reviews in database
-      const results = await getTrustpilotReviews(domain, params.productId);
+      const results = await startTrustpilotReviewScraping(domain);
       
       // Log the complete results to console
       console.log("Trustpilot Reviews Results:", results);
       
-      if (results.success) {
-        alert(`Successfully fetched and stored ${results.data?.length || 0} Trustpilot reviews. Check the console for details.`);
-      } else {
-        alert(`Error fetching Trustpilot reviews: ${results.error}`);
-      }
     } catch (error) {
       console.error("Error calling Trustpilot API:", error);
       alert("Error calling Trustpilot API. Check console for details.");
@@ -547,11 +542,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       // Log the complete results to console
       console.log("Amazon Reviews Results:", results);
       
-      if (results.success) {
-        alert(`Successfully fetched ${results.data?.length || 0} Amazon reviews. Check the console for details.`);
-      } else {
-        alert(`Error fetching Amazon reviews: ${results.error}`);
-      }
     } catch (error) {
       console.error("Error calling Amazon API:", error);
       alert("Error calling Amazon API. Check console for details.");

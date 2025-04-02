@@ -2,29 +2,49 @@
 
 import { ApifyClient } from 'apify-client';
 import { createClient } from '@/app/utils/supabase/server';
-import { reviewSources } from '@/schema/review_sources';
-import { products } from '@/schema/products';
 import { parseReviewDate } from '@/lib/utils';
 
+export interface TrustpilotReview {
+	companyPageUrl: string;
+	reviewId: string;
+	companyName: string;
+	businessUnitId: string;
+	reviewUrl: string;
+	reviewDate: string;
+	reviewDateOfExperience: string;
+	reviewLabel: string;
+	isReviewVerified: boolean;
+	reviewer: string;
+	reviewTitle: string;
+	reviewDescription: string;
+	reviewRatingScore: number;
+	reviewersCountry: string;
+	reviewLanguage: string;
+	reviewCompanyResponse: string;
+	scrapedDateTime: string;
+	scrapedAtReviewPageNumber: number;
+}
+
 /**
- * Server action to fetch Trustpilot reviews for a company
+ * Server action to initiate Trustpilot review scraping via Apify
  * @param companyWebsite The website of the company to fetch reviews for
- * @param productId The ID of the product to associate reviews with
- * @param filterByVerified Whether to filter reviews by verified status
- * @param forceRefresh Force a fresh scrape regardless of cache status
- * @returns The scraped Trustpilot reviews
+ * @returns Object containing success status and run information
  */
-export async function getTrustpilotReviews(
-	companyWebsite: string,
-	productId?: string,
-	filterByVerified: boolean = true,
-	forceRefresh: boolean = false
-) {
+export async function startTrustpilotReviewScraping(companyWebsite: string) {
 	try {
-		// Initialize the ApifyClient with your API token from environment variable
+		// Initialize the ApifyClient
 		const client = new ApifyClient({
 			token: process.env.APIFY_API_TOKEN,
 		});
+
+		// Extract domain from URL for product_source
+		let domain = companyWebsite;
+		try {
+			const url = new URL(domain);
+			domain = url.hostname;
+		} catch (error) {
+			console.warn("Failed to parse URL for domain extraction:", error);
+		}
 
 		// Prepare Actor input
 		const input = {
@@ -33,112 +53,93 @@ export async function getTrustpilotReviews(
 			"sortBy": "recency",
 			"filterByStarRating": "",
 			"filterByLanguage": "all",
-			"filterByVerified": filterByVerified,
+			"filterByVerified": true,
 			"filterByCountryOfReviewers": "",
 			"startFromPageNumber": 1,
 			"endAtPageNumber": 1,
+			"customData": {
+				"companyWebsite": domain
+			},
 			"Proxy configuration": {
 				"useApifyProxy": false
 			}
 		};
 
-		// Run the Actor and wait for it to finish
-		const run = await client.actor("l3wcDhSSC96LBRUpc").call(input);
 
-		// Fetch Actor results from the run's dataset
-		const { items } = await client.dataset(run.defaultDatasetId).listItems();
+		// Start the Apify actor run
+		const runInfo = await client.actor("l3wcDhSSC96LBRUpc").start(input);
 
-		// Store reviews in database if productId is provided
-		if (productId) {
-			await storeReviewsInDatabase(items, productId);
-		}
+		console.log(`Started Trustpilot review scrape for URL ${companyWebsite}. Run ID: ${runInfo.id}`);
 
 		return {
 			success: true,
-			data: items,
-			fromCache: false,
-			datasetUrl: `https://console.apify.com/storage/datasets/${run.defaultDatasetId}`
+			message: `Trustpilot review scraping initiated for URL ${companyWebsite}.`,
+			runId: runInfo.id
 		};
 	} catch (error) {
-		console.error('Error fetching Trustpilot reviews:', error);
+		console.error('Error starting Trustpilot review scrape:', error);
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : 'Unknown error occurred',
-			fromCache: false
+			error: error instanceof Error ? error.message : 'Unknown error occurred starting scrape'
 		};
 	}
 }
 
 /**
- * Normalizes and stores Trustpilot reviews in the database
+ * Stores Trustpilot reviews in the database using the new schema
  * @param reviews The raw Trustpilot reviews from Apify
- * @param productId The ID of the product to associate reviews with
+ * @param companyDomain The domain of the company (used as product_source)
  */
-async function storeReviewsInDatabase(reviews: any[], productId: string) {
+export async function storeTrustpilotReviews(reviews: TrustpilotReview[], companyDomain: string) {
 	try {
 		const supabase = createClient();
 		
-		// First, delete all existing reviews for this product from Trustpilot
-		// This implements the "delete and replace" approach we agreed on
+		// First, delete all existing reviews for this source
 		await supabase
 			.from('review_sources')
 			.delete()
 			.match({ 
-				product_id: productId,
+				product_source: companyDomain,
 				source: 'trustpilot'
 			});
 		
-		// Log a sample review date for debugging
+		// Log a sample review for debugging
 		if (reviews.length > 0) {
-			console.log('Sample review date format:', reviews[0].reviewDate);
-			console.log('Sample review object:', JSON.stringify(reviews[0], null, 2));
+			console.log('Sample Trustpilot review:', JSON.stringify(reviews[0], null, 2));
 		}
 		
 		// Normalize and prepare the reviews for insertion
 		const normalizedReviews = reviews.map(review => {
-			// Parse the date string into a proper Date object
 			const parsedDate = parseReviewDate(review.reviewDate, 'trustpilot');
 			
 			return {
-				productId: productId, // Use TypeScript camelCase property names
+				product_source: companyDomain,
 				source: 'trustpilot',
-				sourceId: review.reviewId,
-				reviewText: review.reviewDescription || '',
-				reviewTitle: review.reviewTitle || '',
+				source_id: review.reviewId,
+				review_text: review.reviewDescription || '',
+				review_title: review.reviewTitle || '',
 				rating: review.reviewRatingScore,
-				// Store as a standardized date
-				reviewDate: parsedDate ? parsedDate.toISOString().split('T')[0] : null, // YYYY-MM-DD format
-				reviewerName: review.reviewer || '',
+				review_date: parsedDate ? parsedDate.toISOString().split('T')[0] : null,
+				reviewer_name: review.reviewer || '',
 				verified: review.isReviewVerified || false,
-				sourceData: review
+				source_data: review
 			};
 		});
 		
-		// However, with direct Supabase queries, we need to use the database column names
+		// Insert the normalized reviews
 		const { error } = await supabase
 			.from('review_sources')
-			.insert(normalizedReviews.map(review => ({
-				product_id: review.productId,
-				source: review.source,
-				source_id: review.sourceId,
-				review_text: review.reviewText,
-				review_title: review.reviewTitle,
-				rating: review.rating,
-				review_date: review.reviewDate,
-				reviewer_name: review.reviewerName,
-				verified: review.verified,
-				source_data: review.sourceData
-			})));
+			.insert(normalizedReviews);
 			
 		if (error) {
-			console.error('Error storing reviews in database:', error);
+			console.error('Error storing Trustpilot reviews in database:', error);
 			throw error;
 		}
 		
-		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for product ${productId}`);
+		console.log(`Successfully stored ${normalizedReviews.length} Trustpilot reviews for domain ${companyDomain}`);
 		
 	} catch (error) {
-		console.error('Error in storeReviewsInDatabase:', error);
+		console.error('Error in storeTrustpilotReviews:', error);
 		throw error;
 	}
 } 
