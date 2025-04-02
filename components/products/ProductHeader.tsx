@@ -166,12 +166,13 @@ export function ProductHeader({
               {onRefreshReviews && (
                 <div className="flex gap-2">
                   <Button 
-                    variant="outline" 
+                    variant={isRefreshingReviews ? "default" : "outline"} 
                     onClick={() => onRefreshReviews(true)} 
                     disabled={isRefreshingReviews}
+                    className={isRefreshingReviews ? "bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-300" : ""}
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin' : ''}`} /> 
-                    Refresh All ({competitorCount + 1})
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin text-blue-600' : ''}`} /> 
+                    {isRefreshingReviews ? "Scraping..." : `Refresh All (${competitorCount + 1})`}
                   </Button>
                   {!hideIndexForRag && (
                     <IndexReviewsButton 

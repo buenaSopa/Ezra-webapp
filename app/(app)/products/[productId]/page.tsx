@@ -648,30 +648,25 @@ export default function ProductPage({ params }: ProductPageProps) {
             { description: "Using cached reviews" }
           );
         } else {
-          // Format a summary of what happened
-          const sourcesText = results.sources.map(source => 
-            `${source.name}: ${source.success ? 'Success' : 'Failed'}`
-          ).join(', ');
-          
           // If competitors were included, show additional information
           if (includeCompetitors && results.competitorResults && results.competitorResults.length > 0) {
             const successfulCompetitors = results.competitorResults.filter(c => c.success).length;
             const totalCompetitors = results.competitorResults.length;
             
             // Format for Sonner toast with competitor info
-            toast.success(`Reviews refreshed for ${product.name} and ${successfulCompetitors}/${totalCompetitors} competitors`, {
-              description: sourcesText
+            toast.success(`Review scraping started for ${product.name} and ${successfulCompetitors}/${totalCompetitors} competitors`, {
+              description: "This process may take up to 5 minutes. Grab a coffee while we collect all the reviews for you! ☕"
             });
           } else {
             // Format for Sonner toast - main product only
-            toast.success("Successfully refreshed reviews", {
-              description: sourcesText
+            toast.success("Review scraping started", {
+              description: "This process may take up to 5 minutes. Grab a coffee while we collect all the reviews for you! ☕"
             });
           }
         }
       } else {
         // Format for Sonner toast
-        toast.error("Error refreshing reviews", {
+        toast.error("Error initiating review scraping", {
           description: results.error || "An unknown error occurred"
         });
       }
@@ -679,7 +674,7 @@ export default function ProductPage({ params }: ProductPageProps) {
       console.error("Error refreshing reviews:", error);
       
       // Format for Sonner toast
-      toast.error("Error refreshing reviews", {
+      toast.error("Error initiating review scraping", {
         description: error instanceof Error ? error.message : "An unknown error occurred"
       });
     } finally {

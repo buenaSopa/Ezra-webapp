@@ -55,14 +55,14 @@ export default async function ProductsPage() {
             <div>
               <CardTitle className="text-xl font-bold">Products</CardTitle>
               <CardDescription className="text-sm">
-                All your products in one place, manage and edit your brand.
+                All your products in one place, manage and chat with your brand.
               </CardDescription>
             </div>
             <AddProductButton />
           </div>
         </CardHeader>
         <CardContent className="px-0 py-0">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+          {/* <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
             <div className="relative w-full md:w-72">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -87,7 +87,7 @@ export default async function ProductsPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
+          </div> */}
           
           {/* Empty state or products table will go here */}
           {!products || products.length === 0 ? (
