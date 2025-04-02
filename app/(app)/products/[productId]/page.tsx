@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   Card, 
   CardContent, 
@@ -79,6 +79,59 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
   const [editedCompetitor, setEditedCompetitor] = useState<Product | null>(null);
   const [reviewCount, setReviewCount] = useState<number>(0);
+  
+  // Define the handleRefreshAllReviews function with useCallback
+  const handleRefreshAllReviews = useCallback(async (includeCompetitors = false) => {
+    if (!product) return;
+    
+    setIsRefreshingReviews(true);
+    try {
+      const results = await refreshAllReviews(params.productId, true, includeCompetitors);
+      console.log("All reviews refresh results:", results);
+      
+      if (results.success) {
+        if (results.fromCache) {
+          // Format for Sonner toast
+          toast.info(
+            `Reviews were last refreshed on ${
+              results.cacheDate ? new Date(results.cacheDate).toLocaleString() : 'unknown date'
+            }`,
+            { description: "Using cached reviews" }
+          );
+        } else {
+          // If competitors were included, show additional information
+          if (includeCompetitors && results.competitorResults && results.competitorResults.length > 0) {
+            const successfulCompetitors = results.competitorResults.filter(c => c.success).length;
+            const totalCompetitors = results.competitorResults.length;
+            
+            // Format for Sonner toast with competitor info
+            toast.success(`Review scraping started for ${product.name} and ${successfulCompetitors}/${totalCompetitors} competitors`, {
+              description: "This process may take up to 5 minutes. Grab a coffee while we collect all the reviews for you! ☕"
+            });
+          } else {
+            // Format for Sonner toast - main product only
+            toast.success("Review scraping started", {
+              description: "This process may take up to 5 minutes. Time for a coffee break! ☕ Feel free to continue using the app while we work our magic."
+            });
+          }
+        }
+      } else {
+        // Format for Sonner toast
+        toast.error("Error initiating review scraping", {
+          description: results.error || "An unknown error occurred"
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing reviews:", error);
+      
+      // Format for Sonner toast
+      toast.error("Error initiating review scraping", {
+        description: error instanceof Error ? error.message : "An unknown error occurred"
+      });
+    } finally {
+      setIsRefreshingReviews(false);
+    }
+  }, [product, params.productId, setIsRefreshingReviews]);
   
   // Use SWR to fetch scraping job status and refresh automatically
   const { data: scrapingData } = useSWR(
@@ -170,13 +223,35 @@ export default function ProductPage({ params }: ProductPageProps) {
         setFetchError(error.message);
       } else {
         setProduct(data);
+        
+        // Check if this is a newly created product without reviews
+        if (!data.last_reviews_scraped_at && 
+            (data.metadata?.url || data.metadata?.amazon_asin) && 
+            !isRefreshingReviews) {
+          console.log("Auto-triggering review scraping for new product");
+          // Wait a moment to allow UI to render first
+          setTimeout(() => {
+            refreshAllReviews(params.productId, true, true).then(result => {
+              console.log("Auto-triggered review scraping result:", result);
+              if (result.success) {
+                if (!result.fromCache) {
+                  toast.success("Review scraping started automatically", {
+                    description: "This process may take up to 5 minutes. We'll let you know when it's done!"
+                  });
+                }
+              }
+            }).catch(err => {
+              console.error("Error in auto-triggered scraping:", err);
+            });
+          }, 1000);
+        }
       }
       
       setIsLoading(false);
     };
     
     fetchProduct();
-  }, [params.productId, supabase]);
+  }, [params.productId, supabase, isRefreshingReviews]);
   
   // Fetch review count
   useEffect(() => {
@@ -630,58 +705,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     alert("Image upload functionality not implemented yet");
   };
 
-  const handleRefreshAllReviews = async (includeCompetitors = false) => {
-    if (!product) return;
-    
-    setIsRefreshingReviews(true);
-    try {
-      const results = await refreshAllReviews(params.productId, true, includeCompetitors);
-      console.log("All reviews refresh results:", results);
-      
-      if (results.success) {
-        if (results.fromCache) {
-          // Format for Sonner toast
-          toast.info(
-            `Reviews were last refreshed on ${
-              results.cacheDate ? new Date(results.cacheDate).toLocaleString() : 'unknown date'
-            }`,
-            { description: "Using cached reviews" }
-          );
-        } else {
-          // If competitors were included, show additional information
-          if (includeCompetitors && results.competitorResults && results.competitorResults.length > 0) {
-            const successfulCompetitors = results.competitorResults.filter(c => c.success).length;
-            const totalCompetitors = results.competitorResults.length;
-            
-            // Format for Sonner toast with competitor info
-            toast.success(`Review scraping started for ${product.name} and ${successfulCompetitors}/${totalCompetitors} competitors`, {
-              description: "This process may take up to 5 minutes. Grab a coffee while we collect all the reviews for you! ☕"
-            });
-          } else {
-            // Format for Sonner toast - main product only
-            toast.success("Review scraping started", {
-              description: "This process may take up to 5 minutes. Grab a coffee while we collect all the reviews for you! ☕"
-            });
-          }
-        }
-      } else {
-        // Format for Sonner toast
-        toast.error("Error initiating review scraping", {
-          description: results.error || "An unknown error occurred"
-        });
-      }
-    } catch (error) {
-      console.error("Error refreshing reviews:", error);
-      
-      // Format for Sonner toast
-      toast.error("Error initiating review scraping", {
-        description: error instanceof Error ? error.message : "An unknown error occurred"
-      });
-    } finally {
-      setIsRefreshingReviews(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container max-w-6xl mx-auto p-6 flex items-center justify-center h-[80vh]">
@@ -735,6 +758,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         onMetadataChange={handleMetadataChange}
         scrapingStatus={getScrapingStatus()}
         hideIndexForRag={true}
+        showRefreshButton={false}
       />
 
       <Tabs defaultValue="details" className="w-full">

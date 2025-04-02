@@ -290,6 +290,17 @@ export async function deleteProduct(productId: string) {
     throw new Error(`Failed to delete product marketing resources: ${marketingResourcesError.message}`);
   }
   
+  // Delete related scraping jobs
+  const { error: scrapingJobsError } = await supabase
+    .from("scraping_jobs")
+    .delete()
+    .eq("product_id", productId);
+  
+  if (scrapingJobsError) {
+    console.error("Error deleting scraping jobs:", scrapingJobsError);
+    throw new Error(`Failed to delete scraping jobs: ${scrapingJobsError.message}`);
+  }
+  
   // Finally delete the product itself
   const { error: deleteError } = await supabase
     .from("products")

@@ -159,8 +159,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     setIsSubmitting(true)
     
     try {
-      // Show initial toast
-      toast.info("Creating product...", { id: "product-creation" })
       
       const productName = formData.get("productName") as string
       
@@ -198,9 +196,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         toast.error(`Failed to create product: ${result.error}`, { id: "product-creation" })
         throw new Error(result.error || "Failed to create product")
       }
-      
-      // Update toast with success
-      toast.success(`Product "${productName}" created successfully!`, { id: "product-creation" })
       
       // Handle file uploads if any
       const allFiles = [
@@ -288,12 +283,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       if (onSuccess) {
         onSuccess()
       }
-      
-      // Show final success message
-      toast.success(`Product "${productName}" is ready!`, { 
-        duration: 5000,
-        description: "You'll be redirected to the product page."
-      })
       
       // Navigate to the product page
       if (result.productId) {

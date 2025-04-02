@@ -35,6 +35,7 @@ interface ProductHeaderProps {
     subtext?: string;
   };
   hideIndexForRag?: boolean;
+  showRefreshButton?: boolean;
 }
 
 export function ProductHeader({
@@ -52,7 +53,8 @@ export function ProductHeader({
   onInputChange,
   onMetadataChange,
   scrapingStatus = { text: 'Ready', color: 'text-muted-foreground', isReady: true },
-  hideIndexForRag = false
+  hideIndexForRag = false,
+  showRefreshButton = false
 }: ProductHeaderProps) {
   // Format the last reviews scraped date
   const formatLastScrapedDate = () => {
@@ -163,7 +165,7 @@ export function ProductHeader({
               <Button variant="outline" onClick={onEdit}>
                 <Edit className="h-4 w-4 mr-2" /> Edit Product
               </Button>
-              {onRefreshReviews && (
+              {onRefreshReviews && showRefreshButton && (
                 <div className="flex gap-2">
                   <Button 
                     variant={isRefreshingReviews ? "default" : "outline"} 
@@ -204,7 +206,7 @@ export function ProductHeader({
         {!isEditing && (
           <div className="text-xs text-muted-foreground space-y-1">
             {lastScrapedText && <p>{lastScrapedText}</p>}
-            {lastIndexedText && <p>{lastIndexedText}</p>}
+            {/* {lastIndexedText && <p>{lastIndexedText}</p>} */}
             {scrapingStatus && !hideIndexForRag && <p className={scrapingStatus.text.includes('in progress') ? 'text-blue-500 font-medium' : ''}>{scrapingStatus.text}</p>}
           </div>
         )}
