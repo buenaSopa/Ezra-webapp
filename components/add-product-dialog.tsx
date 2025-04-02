@@ -145,16 +145,24 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    // Validate that at least URL or ASIN is provided
+    const formData = new FormData(e.currentTarget)
+    const productUrl = formData.get("productUrl") as string
+    const productAmazonAsin = formData.get("productAmazonAsin") as string
+    
+    if (!productUrl && !productAmazonAsin) {
+      toast.error("Please provide either a Product URL or an Amazon ASIN")
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {
       // Show initial toast
       toast.info("Creating product...", { id: "product-creation" })
       
-      const formData = new FormData(e.currentTarget)
       const productName = formData.get("productName") as string
-      const productUrl = formData.get("productUrl") as string
-      const productAmazonAsin = formData.get("productAmazonAsin") as string
       
       // Prepare data for API call
       const productData = {
@@ -331,64 +339,22 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             name="productUrl"
             type="url"
             placeholder="https://example.com/product"
-            required
           />
         </div>
 
-        <Collapsible open={isAdditionalInfoOpen} onOpenChange={setIsAdditionalInfoOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="flex w-full justify-between">
-              <span>Additional Product Information</span>
-              <ChevronDown className={cn(
-                "h-4 w-4 transition-transform duration-200",
-                isAdditionalInfoOpen && "transform rotate-180"
-              )} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-4">
-            <div className="grid gap-2">
-              <label htmlFor="productAmazonAsin" className="text-sm font-medium">
-                Amazon ASIN (optional)
-              </label>
-              <Input
-                id="productAmazonAsin"
-                name="productAmazonAsin"
-                placeholder="B00EXAMPLE"
-              />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">
-                Product Files
-              </label>
-              <div className="grid gap-3">
-                <Input
-                  type="file"
-                  onChange={handleProductFileChange}
-                  className="flex-1"
-                  multiple
-                  accept=".pdf,.doc,.docx,.txt,.csv"
-                />
-                {productFiles.length > 0 && (
-                  <div className="grid gap-2">
-                    {productFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-md">
-                        <span className="text-sm truncate">{file.name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveProductFile(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        <div className="grid gap-2">
+          <label htmlFor="productAmazonAsin" className="text-sm font-medium">
+            Amazon ASIN
+          </label>
+          <Input
+            id="productAmazonAsin"
+            name="productAmazonAsin"
+            placeholder="B00EXAMPLE"
+          />
+        </div>
+        
+        {/* Message explaining at least one identifier is required */}
+        <p className="text-xs text-amber-500">Please provide at least a Product URL or Amazon ASIN.</p>
       </div>
       
       <Separator className="my-2" />
@@ -504,10 +470,10 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         )}
       </div>
       
-      <Separator className="my-2" />
+      {/* <Separator className="my-2" /> */}
       
       {/* Additional Resources Section */}
-      <div className="grid gap-4 py-4">
+      {/* <div className="grid gap-4 py-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium">Additional Resources</h3>
           <Button 
@@ -582,7 +548,7 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             </div>
           </Card>
         ))}
-      </div>
+      </div> */}
       
       <DialogFooter>
         <Button type="submit" disabled={isSubmitting}>
