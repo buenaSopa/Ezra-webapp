@@ -1,6 +1,6 @@
 import { createClient } from "@/app/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { AddProductButton } from "@/components/add-product-dialog";
+import { RecentChats } from "@/components/RecentChats";
 
 export default async function Dashboard() {
   const supabase = createClient();
@@ -14,10 +14,8 @@ export default async function Dashboard() {
   }
 
   return (
-    <div className="text-center max-w-[400px] px-4 mx-auto">
-      <h2 className="text-2xl font-semibold mb-3">Get Started</h2>
-      <p className="text-muted-foreground mb-6">Add your first product to start creating marketing content</p>
-      <AddProductButton />
+    <div className="container py-6">
+      <RecentChats limit={5} />
     </div>
   );
 } 

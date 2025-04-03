@@ -321,3 +321,42 @@ export async function updateChatSessionTimestamp(sessionId: string) {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Get all chat sessions for the current user
+ */
+export async function getUserChatSessions() {
+  try {
+    const supabase = createClient();
+    
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("You must be logged in to fetch chat sessions");
+    }
+    
+    // Get all chat sessions with product information
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .select(`
+        *,
+        products:product_id (
+          id,
+          name,
+          metadata
+        )
+      `)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching user chat sessions:", error);
+      throw new Error(`Failed to fetch user chat sessions: ${error.message}`);
+    }
+
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error("Error in getUserChatSessions:", error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
