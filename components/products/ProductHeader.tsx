@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit, MessageSquare, ExternalLink, RefreshCw } from "lucide-react";
-import { IndexReviewsButton } from "./IndexReviewsButton";
 
 interface ProductHeaderProps {
   product: {
@@ -178,12 +177,6 @@ export function ProductHeader({
                     <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingReviews ? 'animate-spin text-blue-600' : ''}`} /> 
                     {isRefreshingReviews ? "Scraping..." : `Refresh All (${competitorCount + 1})`}
                   </Button>
-                  {!hideIndexForRag && (
-                    <IndexReviewsButton 
-                      productId={product.id} 
-                      reviewCount={reviewCount}
-                    />
-                  )}
                 </div>
               )}
               <Button 
