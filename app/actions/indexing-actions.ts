@@ -4,7 +4,18 @@ import { createClient } from "@/app/utils/supabase/server";
 import { indexProductReviews, Review } from "@/lib/reviews-indexer";
 import { revalidatePath } from "next/cache";
 
-export async function indexProductReviewsAction(productId: string) {
+export async function indexProductReviewsAction({
+  productId,
+  source,
+  sourceIdentifier
+}: {
+  productId: string;
+  source?: 'trustpilot' | 'amazon';
+  sourceIdentifier?: string;
+}) {
+  // Create sourceInfo if both source and sourceIdentifier are provided
+  const sourceInfo = source && sourceIdentifier ? { source, sourceIdentifier } : undefined;
+
   try {
     console.log(`Indexing reviews for product ${productId}`);
     const supabase = createClient();
@@ -32,17 +43,12 @@ export async function indexProductReviewsAction(productId: string) {
     const amazonAsin = product.metadata?.amazon_asin;
     
     // Fetch Trustpilot reviews if URL exists
-    if (productUrl) {
+    if (productUrl && (!sourceInfo || sourceInfo.source === 'trustpilot')) {
       try {
         // Extract domain from URL for Trustpilot matching
         let domain = productUrl;
-        try {
-          const url = new URL(domain);
-          domain = url.hostname;
-        } catch (error) {
-          // If URL parsing fails, just use the raw value
-          console.warn("Failed to parse URL for domain extraction:", error);
-        }
+
+        console.log("Trustpilot Domain:", domain);
         
         // Enhanced query to fetch more fields including review_title and source_data
         const { data: trustpilotReviews, error: trustpilotError } = await supabase
@@ -81,7 +87,7 @@ export async function indexProductReviewsAction(productId: string) {
     }
     
     // Fetch Amazon reviews if ASIN exists
-    if (amazonAsin) {
+    if (amazonAsin && (!sourceInfo || sourceInfo.source === 'amazon')) {
       try {
         // Enhanced query to fetch more fields including review_title and source_data
         const { data: amazonReviews, error: amazonError } = await supabase
@@ -130,7 +136,7 @@ export async function indexProductReviewsAction(productId: string) {
     console.log(`Found ${allReviews.length} reviews to index from review sources`);
     
     // Call the indexing function
-    const result = await indexProductReviews(allReviews, product.name);
+    const result = await indexProductReviews(allReviews, product.name, sourceInfo);
     
     // Revalidate the product page
     revalidatePath(`/products/${productId}`);

@@ -141,7 +141,11 @@ export async function POST(request: NextRequest) {
         
         // Now trigger indexing
         console.log(`Starting RAG indexing for productId: ${productId}`);
-        const indexingResult = await indexProductReviewsAction(productId);
+        const indexingResult = await indexProductReviewsAction({
+          productId,
+          source: "trustpilot", 
+          sourceIdentifier: companyWebsite
+        });
         console.log('Indexing result:', indexingResult);
         
         // Update the job status based on indexing result
@@ -211,7 +215,11 @@ export async function POST(request: NextRequest) {
         
         // Now trigger indexing
         console.log(`Starting RAG indexing for productId: ${productId}`);
-        const indexingResult = await indexProductReviewsAction(productId);
+        const indexingResult = await indexProductReviewsAction({
+          productId,
+          source: "amazon",
+          sourceIdentifier: asin 
+        });
         console.log('Indexing result:', indexingResult);
         
         // Update the job status based on indexing result
@@ -221,7 +229,7 @@ export async function POST(request: NextRequest) {
             status: 'indexed',
             indexedAt: new Date().toISOString()
           });
-    } else {
+        } else {
           await updateScrapingJobStatus({
             actorRunId: resource.id,
             status: 'index_failed',

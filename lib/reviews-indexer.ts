@@ -41,12 +41,49 @@ Review: ${review.text}
 `.trim();
 }
 
-export async function indexProductReviews(reviews: Review[], productName: string) {
+export async function indexProductReviews(
+  reviews: Review[], 
+  productName: string,
+  sourceInfo?: { source: 'trustpilot' | 'amazon', sourceIdentifier: string }
+) {
   try {
     console.log(`Starting to index ${reviews.length} reviews for product: ${productName}`);
     
-    // Get unique product sources from the reviews
-    const productSources = [...new Set(reviews.map(r => r.productSource))].filter(Boolean);
+    // Determine which source(s) to delete based on sourceInfo parameter
+    let deleteFilter: any;
+    
+    if (sourceInfo) {
+      console.log(`Specific source indexing: ${sourceInfo.source} - ${sourceInfo.sourceIdentifier}`);
+      // If specific source is provided, only delete vectors for that source
+      deleteFilter = {
+        must: [
+          {
+            key: "source",
+            match: {
+              value: sourceInfo.source
+            }
+          },
+          {
+            key: "productSource",
+            match: {
+              value: sourceInfo.sourceIdentifier
+            }
+          }
+        ]
+      };
+    } else {
+      // Legacy behavior: delete all sources found in the reviews
+      const productSources = [...new Set(reviews.map(r => r.productSource))].filter(Boolean);
+      console.log(`General indexing for sources:`, productSources);
+      deleteFilter = {
+        must: [{
+          key: "productSource",
+          match: {
+            any: productSources
+          }
+        }]
+      };
+    }
     
     // Initialize Qdrant client
     const client = new QdrantClient({ 
@@ -54,25 +91,16 @@ export async function indexProductReviews(reviews: Review[], productName: string
     apiKey: QDRANT_API_KEY 
     });
 
-    // Delete existing vectors for these product sources
-    if (productSources.length > 0) {
-      console.log(`Deleting existing vectors for sources:`, productSources);
-      const deleteResult = await client.delete(COLLECTION_NAME, {
-        filter: {
-          must: [{
-            key: "productSource",
-            match: {
-              any: productSources
-            }
-          }]
-        }
-      });
-      
-      console.log('Deletion status:', {
-        status: deleteResult.status,
-        operationId: deleteResult.operation_id
-      });
-    }
+    // Delete existing vectors based on the determined filter
+    console.log(`Deleting existing vectors with filter:`, JSON.stringify(deleteFilter, null, 2));
+    const deleteResult = await client.delete(COLLECTION_NAME, {
+      filter: deleteFilter
+    });
+    
+    console.log('Deletion status:', {
+      status: deleteResult.status,
+      operationId: deleteResult.operation_id
+    });
 
     // Create Document objects for indexing with enriched text
     const documents = reviews.map(review => {
