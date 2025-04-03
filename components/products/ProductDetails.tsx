@@ -21,16 +21,12 @@ interface ProductDetailsProps {
   product: Product;
   isEditing: boolean;
   onMetadataChange: (field: string, value: any) => void;
-  onTestTrustpilot: () => void;
-  onTestAmazon?: () => void;
 }
 
 export function ProductDetails({
   product,
   isEditing,
   onMetadataChange,
-  onTestTrustpilot,
-  onTestAmazon
 }: ProductDetailsProps) {
   return (
     <div className="space-y-4">
