@@ -346,10 +346,10 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         <p className="text-xs text-amber-500">Please provide at least a Product URL or Amazon ASIN.</p>
       </div>
       
-      <Separator className="my-2" />
+      {/* <Separator className="my-2" /> */}
       
       {/* Competitors Section */}
-      <div className="grid gap-4 py-4">
+      {/* <div className="grid gap-4 py-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium">Competitors</h3>
           <Button 
@@ -457,7 +457,7 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             ))}
           </div>
         )}
-      </div>
+      </div> */}
       
       {/* <Separator className="my-2" /> */}
       

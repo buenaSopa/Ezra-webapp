@@ -749,15 +749,15 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onMetadataChange={handleMetadataChange}
               />
               
-              <ProductResources
+              {/* <ProductResources
                 resources={product.metadata.resources || []}
                 isEditing={isEditing}
                 onAddResource={handleAddResource}
                 onRemoveResource={handleRemoveResource}
                 onResourceChange={handleResourceChange}
-              />
+              /> */}
               
-              <ProductCompetitors
+              {/* <ProductCompetitors
                 competitors={competitors}
                 availableProducts={availableProducts}
                 isEditing={isEditing}
@@ -770,7 +770,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onCancelCompetitorEdit={handleCancelCompetitorEdit}
                 onCompetitorChange={handleCompetitorChange}
                 onCompetitorMetadataChange={handleCompetitorMetadataChange}
-              />
+              /> */}
 
               {/* <ProductImage 
                 imageUrl={product.metadata.image_url} 

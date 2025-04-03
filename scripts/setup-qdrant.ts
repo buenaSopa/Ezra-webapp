@@ -46,9 +46,8 @@ async function setupQdrant() {
         distance: "Cosine",
       },
       quantization_config: {
-        scalar: {
-          type: "int8",
-          quantile: 0.99,
+        binary: {
+          always_ram: true,
         },
       },
       // Optional: Add HNSW configuration for better performance
