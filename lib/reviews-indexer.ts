@@ -29,16 +29,48 @@ const QDRANT_API_KEY = process.env.QDRANT_CLOUD_API;
 const COLLECTION_NAME = process.env.QDRANT_COLLECTION_NAME || "Ezra";
 
 /**
- * Creates enriched text for better semantic embeddings
+ * Creates enriched text for better semantic embeddings for a collection of reviews
  */
-function createEnrichedEmbeddingText(review: Review, productName: string): string {
-  return `
-Product: ${review.productTitle || productName}
+function createEnrichedChunkText(reviews: Review[], productName: string): string {
+  const reviewTexts = reviews.map(review => {
+    return `
 ${review.title ? `Title: ${review.title}` : ''}
 Rating: ${review.rating}/5
-${review.verified ? 'Verified Purchase' : ''}
 Review: ${review.text}
+`;
+  }).join('');
+
+  return `
+Product: ${productName}
+Source: ${reviews[0].source}
+Reviews:
+${reviewTexts}
 `.trim();
+}
+
+/**
+ * Groups reviews into chunks of a specified size
+ */
+function chunkReviews(reviews: Review[], chunkSize: number = 500): Review[][] {
+  const chunks: Review[][] = [];
+  for (let i = 0; i < reviews.length; i += chunkSize) {
+    chunks.push(reviews.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+function organizeReviewsBySource(reviews: Review[]): Map<string, Review[]> {
+  const sourceMap = new Map<string, Review[]>();
+  
+  reviews.forEach(review => {
+    const key = `${review.source}-${review.productSource}`;
+    if (!sourceMap.has(key)) {
+      sourceMap.set(key, []);
+    }
+    sourceMap.get(key)?.push(review);
+  });
+  
+  return sourceMap;
 }
 
 export async function indexProductReviews(
@@ -102,26 +134,39 @@ export async function indexProductReviews(
       operationId: deleteResult.operation_id
     });
 
-    // Create Document objects for indexing with enriched text
-    const documents = reviews.map(review => {
-      const enrichedText = createEnrichedEmbeddingText(review, productName);
-      return new Document({
-        text: enrichedText,
-        metadata: {
-          productId: review.productId,
-          productName: productName,
-          reviewId: review.id,
-          rating: review.rating,
-          source: review.source,
-          date: review.date,
-          title: review.title,
-          verified: review.verified,
-          productSource: review.productSource
-        }
+    // Group reviews by source and product source
+    const reviewsBySource = organizeReviewsBySource(reviews);
+    
+    // Create chunked documents for each source group
+    const documents: Document[] = [];
+    let totalChunks = 0;
+    
+    for (const [sourceKey, sourceReviews] of reviewsBySource.entries()) {
+      // Get source details from the first review
+      const sampleReview = sourceReviews[0];
+      const [source, productSource] = sourceKey.split('-');
+      
+      // Create chunks of reviews
+      const chunks = chunkReviews(sourceReviews);
+      totalChunks += chunks.length;
+      
+      // Create a document for each chunk with combined reviews
+      chunks.forEach((chunk, chunkIndex) => {
+        const chunkText = createEnrichedChunkText(chunk, productName);
+        
+        documents.push(new Document({
+          text: chunkText,
+          metadata: {
+            productId: sampleReview.productId,
+            productName: productName,
+            chunkIndex: chunkIndex,
+            source: source,
+            productSource: productSource,
+          }
+        }));
       });
-    });
+    }
 
-    console.log(`Created ${documents.length} documents for indexing`);
     
     // Get Qdrant vector store
     const qdrantVectorStore = getQdrantVectorStore();
@@ -151,7 +196,7 @@ export async function indexProductReviews(
     }
     
     console.log("Successfully indexed reviews to Qdrant");
-    return { success: true, count: reviews.length };
+    return { success: true, count: reviews.length, chunks: documents.length };
   } catch (error) {
     console.error("Error indexing reviews:", error);
     return { 

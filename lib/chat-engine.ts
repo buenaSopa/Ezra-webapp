@@ -21,7 +21,7 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 
 	// Create retriever
 	const retriever = index.asRetriever({
-		similarityTopK: 100,
+		similarityTopK: 5,
 		filters: filters
 	});
 
