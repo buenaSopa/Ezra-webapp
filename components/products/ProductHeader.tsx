@@ -24,6 +24,7 @@ interface ProductHeaderProps {
   onStartChat: () => void;
   onRefreshReviews?: (includeCompetitors?: boolean) => void;
   isRefreshingReviews?: boolean;
+  isStartingChat?: boolean;
   competitorCount?: number;
   reviewCount?: number;
   onInputChange: (field: string, value: string) => void;
@@ -48,6 +49,7 @@ export function ProductHeader({
   onStartChat,
   onRefreshReviews,
   isRefreshingReviews = false,
+  isStartingChat = false,
   competitorCount = 0,
   reviewCount = 0,
   onInputChange,
@@ -186,12 +188,17 @@ export function ProductHeader({
               )}
               <Button 
                 onClick={onStartChat} 
-                disabled={!scrapingStatus.isReady}
+                disabled={!scrapingStatus.isReady || isStartingChat}
                 className={!scrapingStatus.isReady ? `${scrapingStatus.color} border border-current bg-transparent hover:bg-transparent` : ''}
               >
                 {!scrapingStatus.isReady ? (
                   <>
                     {scrapingStatus.text}
+                  </>
+                ) : isStartingChat ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Starting Chat...
                   </>
                 ) : (
                   <>

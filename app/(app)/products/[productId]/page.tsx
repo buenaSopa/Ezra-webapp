@@ -79,12 +79,15 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
   const [editedCompetitor, setEditedCompetitor] = useState<Product | null>(null);
   const [reviewCount, setReviewCount] = useState<number>(0);
+  const [hasRunningJobs, setHasRunningJobs] = useState<boolean>(false);
+  const [isStartingChat, setIsStartingChat] = useState<boolean>(false);
   
   // Define the handleRefreshAllReviews function with useCallback
-  const handleRefreshAllReviews = useCallback(async (includeCompetitors = false) => {
+  const handleRefreshAllReviews = useCallback(async (includeCompetitors = false, skipToast = false) => {
     if (!product) return;
     
     setIsRefreshingReviews(true);
+    
     try {
       const results = await refreshAllReviews(params.productId, true, includeCompetitors);
       console.log("All reviews refresh results:", results);
@@ -93,13 +96,6 @@ export default function ProductPage({ params }: ProductPageProps) {
         toast.error("Error initiating review scraping", {
           description: results.error || "An unknown error occurred"
         });
-      } else if (results.fromCache) {
-        toast.info(
-          `Reviews were last refreshed on ${
-            results.cacheDate ? new Date(results.cacheDate).toLocaleString() : 'unknown date'
-          }`,
-          { description: "Using cached reviews" }
-        );
       }
     } catch (error) {
       console.error("Error refreshing reviews:", error);
@@ -124,6 +120,16 @@ export default function ProductPage({ params }: ProductPageProps) {
     },
     { refreshInterval: 5000 } // Refresh every 5 seconds
   );
+  
+  // Update hasRunningJobs state when scraping data changes
+  useEffect(() => {
+    // Check if there are any running jobs
+    const hasRunning = scrapingData?.jobs?.some(job => 
+      job.status === 'running' || job.status === 'indexing' || job.status === 'queued'
+    ) || false;
+    
+    setHasRunningJobs(hasRunning);
+  }, [scrapingData]);
   
   // Determine the overall scraping status
   const getScrapingStatus = () => {
@@ -206,20 +212,9 @@ export default function ProductPage({ params }: ProductPageProps) {
             !isRefreshingReviews) {
           console.log("Auto-triggering review scraping for new product");
           
-          // First show an immediate toast so user knows what's happening
-          toast.success("Automatically starting review scraping for new product", {
-            description: "This process may take up to 5 minutes. Go grab a coffee and come back in a few minutes!",
-            duration: 15000,
-            id: "auto-scrape-toast"
-          });
-          
           // Wait a moment to allow UI to render first
           setTimeout(() => {
-            refreshAllReviews(params.productId, true, true).then(result => {
-              console.log("Auto-triggered review scraping result:", result);
-              // We don't need to show another toast here, as we already showed one
-              // and the webhook will update the UI when scraping completes
-            }).catch(err => {
+            handleRefreshAllReviews(true, true).catch(err => {
               console.error("Error in auto-triggered scraping:", err);
               toast.error("Error starting automatic review scraping", {
                 description: err instanceof Error ? err.message : "An unknown error occurred"
@@ -619,72 +614,13 @@ export default function ProductPage({ params }: ProductPageProps) {
   };
   
   const handleStartChat = () => {
+    // Show loading state
+    setIsStartingChat(true);
+    
     // Navigate to chat page with the product ID
-    router.push(`/chat/new?productId=${params.productId}`);
-  };
-
-  const handleTestTrustpilot = async () => {
-    if (!product || !product.metadata.url) {
-      alert("Please add a product URL first to test Trustpilot reviews");
-      return;
-    }
-    
-    try {
-      // Extract domain from URL for the Trustpilot search
-      let domain = product.metadata.url;
-      try {
-        const url = new URL(domain);
-        domain = url.hostname;
-      } catch (error) {
-        // If URL parsing fails, just use the raw value
-      }
-      
-      console.log("Testing Trustpilot scraper for domain:", domain);
-      
-      // Call the Trustpilot server action with product ID to store reviews in database
-      const results = await startTrustpilotReviewScraping(domain, params.productId);
-      
-      // Log the complete results to console
-      console.log("Trustpilot Reviews Results:", results);
-      
-    } catch (error) {
-      console.error("Error calling Trustpilot API:", error);
-      alert("Error calling Trustpilot API. Check console for details.");
-    }
-  };
-
-  const handleTestAmazon = async () => {
-    if (!product || !product.metadata.amazon_asin) {
-      alert("Please add an Amazon ASIN first to test Amazon reviews");
-      return;
-    }
-    
-    try {
-      // Ensure ASIN is trimmed
-      const asin = product.metadata.amazon_asin.trim();
-      
-      // Update the product with trimmed ASIN if needed
-      if (asin !== product.metadata.amazon_asin) {
-        handleMetadataChange('amazon_asin', asin);
-      }
-      
-      console.log("Testing Amazon review scraper for ASIN:", asin);
-      
-      // Call the Amazon reviews server action with product ID to get reviews
-      const results = await getAmazonReviews(asin, params.productId);
-      
-      // Log the complete results to console
-      console.log("Amazon Reviews Results:", results);
-      
-    } catch (error) {
-      console.error("Error calling Amazon API:", error);
-      alert("Error calling Amazon API. Check console for details.");
-    }
-  };
-
-  // Image upload handler (placeholder)
-  const handleImageUpload = () => {
-    alert("Image upload functionality not implemented yet");
+    setTimeout(() => {
+      router.push(`/chat/new?productId=${params.productId}`);
+    }, 200); // Small delay to allow loading state to be visible
   };
 
   if (isLoading) {
@@ -732,8 +668,9 @@ export default function ProductPage({ params }: ProductPageProps) {
         onSave={handleSaveProduct}
         onCancel={() => setIsEditing(false)}
         onStartChat={handleStartChat}
-        onRefreshReviews={handleRefreshAllReviews}
         isRefreshingReviews={isRefreshingReviews}
+        isStartingChat={isStartingChat}
+        onRefreshReviews={handleRefreshAllReviews}
         competitorCount={competitors.length}
         reviewCount={reviewCount}
         onInputChange={handleInputChange}
@@ -742,6 +679,41 @@ export default function ProductPage({ params }: ProductPageProps) {
         hideIndexForRag={true}
         showRefreshButton={false}
       />
+
+      {/* Scraping Status Card */}
+      {(hasRunningJobs || isRefreshingReviews) && (
+        <Card className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+          <CardContent className="pt-6 flex items-start md:items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            </div>
+            <div className="flex-grow">
+              <h3 className="text-lg font-medium text-blue-700 dark:text-blue-300 mb-1">
+                Review scraping in progress
+              </h3>
+              <p className="text-blue-600 dark:text-blue-400 mb-2">
+                We're gathering reviews for your product. This process typically takes 3-5 minutes to complete.
+              </p>
+              <div className="flex flex-col md:flex-row gap-2 md:gap-4 text-sm text-blue-500 dark:text-blue-400">
+                <div className="flex items-center">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
+                  Feel free to explore other sections
+                </div>
+                <div className="flex items-center">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
+                  You'll be notified when it's done
+                </div>
+                <div className="flex items-center">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
+                  Time for a coffee break! ☕
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="mb-6">
@@ -760,8 +732,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                 product={product}
                 isEditing={isEditing}
                 onMetadataChange={handleMetadataChange}
-                onTestTrustpilot={handleTestTrustpilot}
-                onTestAmazon={handleTestAmazon}
               />
               
               <ProductResources
