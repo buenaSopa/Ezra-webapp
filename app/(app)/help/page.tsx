@@ -38,15 +38,14 @@ export default async function HelpPage() {
                 <AccordionContent>
                   You can add a new product by clicking the "+" button next to Products in the sidebar, 
                   or by clicking the "Add Product" button on the Products page. Enter the product name 
-                  and optionally add a description, URL, and Amazon ASIN.
+                  and URL, and Amazon ASIN.
                 </AccordionContent>
               </AccordionItem>
               
               <AccordionItem value="item-2">
                 <AccordionTrigger>How do I scrape reviews for my product?</AccordionTrigger>
                 <AccordionContent>
-                  After adding a product with a URL or Amazon ASIN, navigate to the product page and 
-                  click the "Refresh Reviews" button. The system will automatically scrape reviews 
+                  After adding a product with a URL or Amazon ASIN, the system will automatically scrape reviews 
                   from Trustpilot and/or Amazon based on the information you provided.
                 </AccordionContent>
               </AccordionItem>
@@ -54,9 +53,7 @@ export default async function HelpPage() {
               <AccordionItem value="item-3">
                 <AccordionTrigger>How do I start a new chat about my product?</AccordionTrigger>
                 <AccordionContent>
-                  Navigate to your product page and click the "Chat" tab. From there you can start a new 
-                  conversation. You can also use the chat feature to analyze reviews, generate marketing angles, 
-                  and create ad copy.
+                  Navigate to your product page and click the "Start New Chat" button.
                 </AccordionContent>
               </AccordionItem>
               
