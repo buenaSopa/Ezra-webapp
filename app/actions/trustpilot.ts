@@ -75,7 +75,7 @@ export async function startTrustpilotReviewScraping(companyWebsite: string, prod
 			"filterByVerified": true,
 			"filterByCountryOfReviewers": "",
 			"startFromPageNumber": 1,
-			"endAtPageNumber": 1,
+			"endAtPageNumber": 20,
 			"customData": {
 				"companyWebsite": domain,
 				"productId": productId

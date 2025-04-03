@@ -331,10 +331,10 @@ export function ChatsTab({
             </div>
           )}
           
-          <Button variant="outline" className="w-full" onClick={onStartChat}>
+          {/* <Button variant="outline" className="w-full" onClick={onStartChat}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Start New Chat
-          </Button>
+          </Button> */}
         </div>
 
         {/* Move AlertDialog outside of the card components so it's not affected by card clicks */}

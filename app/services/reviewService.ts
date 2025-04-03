@@ -241,7 +241,7 @@ async function refreshSingleProduct(
       const asin = product.metadata.amazon_asin.trim();
       
       // Trigger Amazon scraping without awaiting full completion
-      const amazonResult = await fetchAmazonReviews(asin, productId, 10);
+      const amazonResult = await fetchAmazonReviews(asin, productId, 500);
       
       results.sources.push({
         name: 'amazon',
