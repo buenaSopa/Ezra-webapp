@@ -48,7 +48,7 @@ export default async function ProductsPage() {
   }
   
   return (
-    <div className="container mx-auto py-4 max-w-4xl h-full overflow-auto">
+    <div className="container mx-auto p-6 max-w-6xl h-full overflow-auto">
       <Card className="border-none shadow-none">
         <CardHeader className="px-0 pt-0 pb-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
