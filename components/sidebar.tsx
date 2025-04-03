@@ -18,6 +18,7 @@ import {
   Package
 } from "lucide-react";
 import { AddProductIcon } from "./add-product-dialog";
+import { RecentProductsWrapper } from "./RecentProductsWrapper";
 
 export function Sidebar() {
   return (
@@ -40,7 +41,7 @@ export function Sidebar() {
             <div className="flex items-center justify-between mb-2">
               <Link href="/products" className="block">
                 <Button variant="ghost" className="w-full justify-start">
-              <h2 className="text-sm font-semibold">Products</h2>
+                  <h2 className="text-sm font-semibold">Products</h2>
                 </Button>
               </Link>
               <AddProductIcon />
@@ -71,6 +72,8 @@ export function Sidebar() {
                 </Button>
               </Link>
             </div> */}
+            {/* Recent products list */}
+            <RecentProductsWrapper />
           </div>
         </div>
       </SidebarContent>

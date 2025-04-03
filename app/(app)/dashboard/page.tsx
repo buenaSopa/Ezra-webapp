@@ -15,7 +15,7 @@ export default async function Dashboard() {
 
   return (
     <div className="container py-6">
-      <RecentChats limit={5} />
+      <RecentChats limit={4} />
     </div>
   );
 } 

@@ -1,0 +1,66 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
+import { createClient } from "@/app/utils/supabase/client";
+
+interface Product {
+  id: string;
+  name: string;
+}
+
+export function RecentProductsWrapper({ limit = 5 }: { limit?: number }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      const supabase = createClient();
+      
+      const { data } = await supabase
+        .from("products")
+        .select("id, name")
+        .not("metadata->is_competitor", "eq", true)
+        .order("updated_at", { ascending: false })
+        .limit(limit);
+      
+      if (data) {
+        setProducts(data);
+      }
+      setIsLoading(false);
+    };
+    
+    fetchProducts();
+  }, [limit]);
+  
+  if (isLoading) {
+    // Show loading state
+    return (
+      <div className="space-y-1 mt-2">
+        {[...Array(limit)].map((_, i) => (
+          <div key={i} className="h-8 w-full bg-muted/20 rounded animate-pulse"></div>
+        ))}
+      </div>
+    );
+  }
+  
+  if (products.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div className="space-y-1 mt-2">
+      {products.map((product: Product) => (
+        <Link key={product.id} href={`/products/${product.id}`} className="block">
+          <Button variant="ghost" className="w-full justify-start text-xs h-8 px-2">
+            <FileText className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+            <span className="truncate">{product.name}</span>
+          </Button>
+        </Link>
+      ))}
+    </div>
+  );
+} 
