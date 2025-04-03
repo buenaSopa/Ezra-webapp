@@ -202,28 +202,74 @@ async function refreshSingleProduct(
     };
   }
 
-  // Run scrapers in parallel for efficiency
+  // Define scraping tasks (we'll trigger these, not wait for them)
   const scrapingTasks = [];
 
   // 1. Trustpilot Scraper (if product has a URL)
   if (product.metadata?.url) {
-    scrapingTasks.push(runScraper('trustpilot', async () => {
-      return await fetchTrustpilotReviews(product.metadata.url, productId);
-    }));
+    try {
+      const trustpilotResult = await fetchTrustpilotReviews(product.metadata.url, productId);
+      results.sources.push({
+        name: 'trustpilot',
+        success: trustpilotResult.success,
+        message: trustpilotResult.success 
+          ? 'Trustpilot review scraping initiated' 
+          : 'Failed to initiate Trustpilot review scraping',
+        data: trustpilotResult,
+        error: trustpilotResult.error
+      });
+      
+      if (!trustpilotResult.success) {
+        results.errors++;
+      }
+    } catch (error) {
+      console.error('Error triggering Trustpilot review scraping:', error);
+      results.sources.push({
+        name: 'trustpilot',
+        success: false,
+        message: 'Failed to initiate Trustpilot review scraping',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      results.errors++;
+    }
   }
 
   // 2. Amazon Scraper (if product has an ASIN)
   if (product.metadata?.amazon_asin) {
-    // Ensure the ASIN is trimmed to handle any accidental spaces
-    const asin = product.metadata.amazon_asin.trim();
-    // Use a higher max reviews value to get more comprehensive results
-    scrapingTasks.push(runScraper('amazon', async () => {
-      return await fetchAmazonReviews(asin, productId, 10);
-    }));
+    try {
+      // Ensure the ASIN is trimmed to handle any accidental spaces
+      const asin = product.metadata.amazon_asin.trim();
+      
+      // Trigger Amazon scraping without awaiting full completion
+      const amazonResult = await fetchAmazonReviews(asin, productId, 10);
+      
+      results.sources.push({
+        name: 'amazon',
+        success: amazonResult.success,
+        message: amazonResult.success 
+          ? 'Amazon review scraping initiated' 
+          : 'Failed to initiate Amazon review scraping',
+        data: amazonResult,
+        error: amazonResult.error
+      });
+      
+      if (!amazonResult.success) {
+        results.errors++;
+      }
+    } catch (error) {
+      console.error('Error triggering Amazon review scraping:', error);
+      results.sources.push({
+        name: 'amazon',
+        success: false,
+        message: 'Failed to initiate Amazon review scraping',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      results.errors++;
+    }
   }
 
   // If no valid sources for this product, return early
-  if (scrapingTasks.length === 0) {
+  if (results.sources.length === 0) {
     return {
       sources: [{
         name: 'configuration',
@@ -235,30 +281,8 @@ async function refreshSingleProduct(
     };
   }
 
-  // Wait for all scrapers to complete (even if some fail)
-  const sourceResults = await Promise.allSettled(scrapingTasks);
-  
-  // Process results
-  sourceResults.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      results.sources.push(result.value);
-      if (!result.value.success) {
-        results.errors++;
-      }
-    } else {
-      // Add error for rejected promises
-      results.sources.push({
-        name: `source-${index}`, // Fallback name if we can't determine the source
-        success: false,
-        message: 'Scraper failed',
-        error: result.reason?.toString() || 'Unknown error'
-      });
-      results.errors++;
-    }
-  });
-
-  // Update the overall last_reviews_scraped_at if any source succeeded
-  if (results.errors < scrapingTasks.length) {
+  // Update the product's last_reviews_scraped_at timestamp if any source succeeded
+  if (results.errors < results.sources.length) {
     await supabase
       .from('products')
       .update({ last_reviews_scraped_at: new Date().toISOString() })
@@ -266,26 +290,4 @@ async function refreshSingleProduct(
   }
   
   return results;
-}
-
-// Helper to run a scraper with error handling
-async function runScraper(name: string, scraperFn: () => Promise<any>) {
-  try {
-    const result = await scraperFn();
-    return {
-      name,
-      success: result.success,
-      message: result.success ? 'Successfully scraped reviews' : 'Failed to scrape reviews',
-      data: result.data,
-      error: result.error
-    };
-  } catch (error) {
-    console.error(`Error running ${name} scraper:`, error);
-    return {
-      name,
-      success: false,
-      message: 'Scraper encountered an error',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
 }

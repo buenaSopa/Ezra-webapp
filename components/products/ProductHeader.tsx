@@ -191,7 +191,6 @@ export function ProductHeader({
               >
                 {!scrapingStatus.isReady ? (
                   <>
-                    <span className={`w-2 h-2 rounded-full mr-2 ${scrapingStatus.color.replace('text-', 'bg-')}`}></span>
                     {scrapingStatus.text}
                   </>
                 ) : (

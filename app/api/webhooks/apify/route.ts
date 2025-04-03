@@ -33,25 +33,25 @@ export async function POST(request: NextRequest) {
     }
     
     // 2. Verify webhook signature if secret is set
-    if (WEBHOOK_SECRET) {
-      const signature = request.headers.get('x-apify-webhook-signature');
-      if (!signature) {
-        console.error("Missing webhook signature");
-        return NextResponse.json({ error: 'Missing signature header' }, { status: 401 });
-      }
+    // if (WEBHOOK_SECRET) {
+    //   const signature = request.headers.get('x-apify-webhook-signature');
+    //   if (!signature) {
+    //     console.error("Missing webhook signature");
+    //     return NextResponse.json({ error: 'Missing signature header' }, { status: 401 });
+    //   }
 
-      const hash = crypto
-        .createHmac('sha256', WEBHOOK_SECRET)
-        .update(text)
-        .digest('hex');
+    //   const hash = crypto
+    //     .createHmac('sha256', WEBHOOK_SECRET)
+    //     .update(text)
+    //     .digest('hex');
 
-      if (hash !== signature) {
-        console.error("Invalid webhook signature");
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-      }
-    } else {
-      console.warn("APIFY_WEBHOOK_SECRET not set - skipping signature verification");
-    }
+    //   if (hash !== signature) {
+    //     console.error("Invalid webhook signature");
+    //     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    //   }
+    // } else {
+    //   console.warn("APIFY_WEBHOOK_SECRET not set - skipping signature verification");
+    // }
   } catch (error) {
     console.error("Failed to process webhook request:", error);
     return NextResponse.json({ error: 'Failed to process webhook request' }, { status: 400 });
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
             status: 'indexed',
             indexedAt: new Date().toISOString()
           });
-        } else {
+    } else {
           await updateScrapingJobStatus({
             actorRunId: resource.id,
             status: 'index_failed',

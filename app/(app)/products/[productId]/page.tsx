@@ -89,42 +89,21 @@ export default function ProductPage({ params }: ProductPageProps) {
       const results = await refreshAllReviews(params.productId, true, includeCompetitors);
       console.log("All reviews refresh results:", results);
       
-      if (results.success) {
-        if (results.fromCache) {
-          // Format for Sonner toast
-          toast.info(
-            `Reviews were last refreshed on ${
-              results.cacheDate ? new Date(results.cacheDate).toLocaleString() : 'unknown date'
-            }`,
-            { description: "Using cached reviews" }
-          );
-        } else {
-          // If competitors were included, show additional information
-          if (includeCompetitors && results.competitorResults && results.competitorResults.length > 0) {
-            const successfulCompetitors = results.competitorResults.filter(c => c.success).length;
-            const totalCompetitors = results.competitorResults.length;
-            
-            // Format for Sonner toast with competitor info
-            toast.success(`Review scraping started for ${product.name} and ${successfulCompetitors}/${totalCompetitors} competitors`, {
-              description: "This process may take up to 5 minutes. Grab a coffee while we collect all the reviews for you! ☕"
-            });
-          } else {
-            // Format for Sonner toast - main product only
-            toast.success("Review scraping started", {
-              description: "This process may take up to 5 minutes. Time for a coffee break! ☕ Feel free to continue using the app while we work our magic."
-            });
-          }
-        }
-      } else {
-        // Format for Sonner toast
+      if (!results.success) {
         toast.error("Error initiating review scraping", {
           description: results.error || "An unknown error occurred"
         });
+      } else if (results.fromCache) {
+        toast.info(
+          `Reviews were last refreshed on ${
+            results.cacheDate ? new Date(results.cacheDate).toLocaleString() : 'unknown date'
+          }`,
+          { description: "Using cached reviews" }
+        );
       }
     } catch (error) {
       console.error("Error refreshing reviews:", error);
       
-      // Format for Sonner toast
       toast.error("Error initiating review scraping", {
         description: error instanceof Error ? error.message : "An unknown error occurred"
       });
@@ -145,9 +124,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     },
     { refreshInterval: 5000 } // Refresh every 5 seconds
   );
-  
-  // Check if there are any running jobs
-  const hasRunningJobs = scrapingData?.jobs?.some(job => job.status === 'running') || false;
   
   // Determine the overall scraping status
   const getScrapingStatus = () => {
@@ -229,19 +205,25 @@ export default function ProductPage({ params }: ProductPageProps) {
             (data.metadata?.url || data.metadata?.amazon_asin) && 
             !isRefreshingReviews) {
           console.log("Auto-triggering review scraping for new product");
+          
+          // First show an immediate toast so user knows what's happening
+          toast.success("Automatically starting review scraping for new product", {
+            description: "This process may take up to 5 minutes. Go grab a coffee and come back in a few minutes!",
+            duration: 15000,
+            id: "auto-scrape-toast"
+          });
+          
           // Wait a moment to allow UI to render first
           setTimeout(() => {
             refreshAllReviews(params.productId, true, true).then(result => {
               console.log("Auto-triggered review scraping result:", result);
-              if (result.success) {
-                if (!result.fromCache) {
-                  toast.success("Review scraping started automatically", {
-                    description: "This process may take up to 5 minutes. We'll let you know when it's done!"
-                  });
-                }
-              }
+              // We don't need to show another toast here, as we already showed one
+              // and the webhook will update the UI when scraping completes
             }).catch(err => {
               console.error("Error in auto-triggered scraping:", err);
+              toast.error("Error starting automatic review scraping", {
+                description: err instanceof Error ? err.message : "An unknown error occurred"
+              });
             });
           }, 1000);
         }
