@@ -141,25 +141,40 @@ export default function ProductPage({ params }: ProductPageProps) {
       };
     }
     
-    // Check for active jobs - prioritize any running/indexing jobs
-    const runningJob = scrapingData.jobs.find(job => 
-      job.status === 'running' || job.status === 'indexing' || job.status === 'queued'
+    // Define status priority (lower number = higher priority to show)
+    const statusPriority: Record<string, number> = {
+      'queued': 1,
+      'running': 2,
+      'indexing': 3,
+      'indexed': 4,
+      'completed': 5,
+      'failed': 6,
+      'index_failed': 7
+    };
+    
+    // Find the job with the highest priority (lowest stage in the process)
+    const activeJobs = scrapingData.jobs.filter(job => 
+      ['queued', 'running', 'indexing'].includes(job.status)
     );
     
-    if (runningJob) {
-      if (runningJob.status === 'indexing') {
+    if (activeJobs.length > 0) {
+      // Sort by priority and take the one with the highest priority (lowest number)
+      activeJobs.sort((a, b) => statusPriority[a.status as keyof typeof statusPriority] - statusPriority[b.status as keyof typeof statusPriority]);
+      const highestPriorityJob = activeJobs[0];
+      
+      if (highestPriorityJob.status === 'queued' || highestPriorityJob.status === 'running') {
+        return {
+          text: 'Loading...',
+          color: 'text-blue-500',
+          isReady: false
+        };
+      } else if (highestPriorityJob.status === 'indexing') {
         return {
           text: 'Vectorizing...',
           color: 'text-blue-500',
           isReady: false
         };
       }
-      
-      return {
-        text: 'Loading...',
-        color: 'text-blue-500',
-        isReady: false
-      };
     }
     
     // Check for recently completed jobs - any indexed job is good!

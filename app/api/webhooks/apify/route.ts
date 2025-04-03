@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         console.log("Input from key-value store:", JSON.stringify(input.value, null, 2));
         
         // Extract companyWebsite and productId from input
-        const companyWebsite = input.value.customData?.companyWebsite;
+        const companyWebsite = input.value.companyWebsite;
         productId = input.value.customData?.productId;
         
         if (!companyWebsite) {
@@ -129,11 +129,6 @@ export async function POST(request: NextRequest) {
         
         // Extract domain from URL for storage
         let domain = companyWebsite;
-        try {
-          domain = new URL(companyWebsite);
-        } catch (error) {
-          console.error("Error extracting domain from URL:", error);
-        }
         
         // Store the reviews
         await storeTrustpilotReviews(items as unknown as TrustpilotReview[], domain);
