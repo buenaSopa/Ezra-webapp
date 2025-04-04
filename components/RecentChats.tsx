@@ -69,17 +69,6 @@ export async function RecentChats({ limit = 5 }: RecentChatsProps) {
             </Link>
           ))}
         </div>
-        
-        {hasMoreChats && (
-          <div className="mt-4 text-center">
-            <Link 
-              href="/chat" 
-              className="text-primary hover:underline text-sm font-medium"
-            >
-              View all conversations
-            </Link>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
