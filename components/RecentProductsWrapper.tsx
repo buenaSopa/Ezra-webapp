@@ -11,29 +11,49 @@ interface Product {
   name: string;
 }
 
+// Create a simple event emitter to trigger refreshes
+const EVENT_NAME = "product-list-changed";
+export const refreshProductList = () => {
+  // Dispatch an event when products are added or deleted
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(EVENT_NAME));
+  }
+};
+
 export function RecentProductsWrapper({ limit = 5 }: { limit?: number }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    const supabase = createClient();
+    
+    const { data } = await supabase
+      .from("products")
+      .select("id, name")
+      .not("metadata->is_competitor", "eq", true)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+    
+    if (data) {
+      setProducts(data);
+    }
+    setIsLoading(false);
+  };
+  
   useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      const supabase = createClient();
-      
-      const { data } = await supabase
-        .from("products")
-        .select("id, name")
-        .not("metadata->is_competitor", "eq", true)
-        .order("updated_at", { ascending: false })
-        .limit(limit);
-      
-      if (data) {
-        setProducts(data);
-      }
-      setIsLoading(false);
+    fetchProducts();
+    
+    // Listen for product changes and refresh the list
+    const handleProductChange = () => {
+      fetchProducts();
     };
     
-    fetchProducts();
+    window.addEventListener(EVENT_NAME, handleProductChange);
+    
+    return () => {
+      window.removeEventListener(EVENT_NAME, handleProductChange);
+    };
   }, [limit]);
   
   if (isLoading) {

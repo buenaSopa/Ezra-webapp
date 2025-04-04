@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { deleteProduct } from "@/app/actions/products";
 import { useRouter } from "next/navigation";
+import { refreshProductList } from "./RecentProductsWrapper";
 
 interface DeleteProductButtonProps {
   productId: string;
@@ -33,6 +34,7 @@ export function DeleteProductButton({ productId, productName }: DeleteProductBut
     try {
       await deleteProduct(productId);
       setIsOpen(false);
+      refreshProductList();
       router.push("/products");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete product");

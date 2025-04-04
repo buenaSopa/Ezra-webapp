@@ -14,7 +14,7 @@ import { parseReviewDate } from '@/lib/utils';
 export async function getAmazonReviews(
 	asin: string,
 	productId: string,
-	maxReviews: number = 10
+	maxReviews: number = 400
 ) {
 	try {
 		// Trim the ASIN to handle spaces before or after
@@ -47,10 +47,9 @@ export async function getAmazonReviews(
 		const input = {
 			"ASIN_or_URL": [trimmedAsin],
 			"max_reviews": maxReviews,
-			"country": "United States",
     		"End_date": "1990-01-01",
 			"sort_reviews_by": ["helpful","recent"],
-			"filter_by_verified_purchase_only": ["all_reviews","avp_only_reviews"],
+			"filter_by_verified_purchase_only": ["all_reviews"],
 			"customData": {
 				"asin": trimmedAsin,
 				"productId": productId

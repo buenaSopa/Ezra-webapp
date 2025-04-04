@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
+import { refreshProductList } from "./RecentProductsWrapper"
 
 // Define types for our form data
 type Competitor = {
@@ -283,6 +284,9 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       if (onSuccess) {
         onSuccess()
       }
+      
+      // Refresh the product list in the sidebar
+      refreshProductList()
       
       // Navigate to the product page
       if (result.productId) {
