@@ -168,7 +168,15 @@ export async function getChatSession(sessionId: string) {
   try {
     const supabase = createClient();
     
-    const { data, error } = await supabase
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("You must be logged in to access chat sessions");
+    }
+    
+    // Fetch the chat session
+    const { data: session, error: sessionError } = await supabase
       .from("chat_sessions")
       .select(`
         *,
@@ -181,12 +189,25 @@ export async function getChatSession(sessionId: string) {
       .eq("id", sessionId)
       .single();
 
-    if (error) {
-      console.error("Error fetching chat session:", error);
-      throw new Error(`Failed to fetch chat session: ${error.message}`);
+    if (sessionError || !session) {
+      console.error("Error fetching chat session:", sessionError);
+      throw new Error(`Failed to fetch chat session: ${sessionError?.message || "Session not found"}`);
+    }
+    
+    // Verify the product belongs to the current user
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id")
+      .eq("id", session.product_id)
+      .eq("user_id", user.id)
+      .single();
+      
+    if (productError || !product) {
+      console.error("Error verifying product ownership:", productError);
+      throw new Error("Unauthorized access to this chat session");
     }
 
-    return { success: true, data };
+    return { success: true, data: session };
   } catch (error: any) {
     console.error("Error in getChatSession:", error);
     return { success: false, error: error.message };
@@ -200,6 +221,39 @@ export async function getChatMessages(sessionId: string) {
   try {
     const supabase = createClient();
     
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("You must be logged in to access chat messages");
+    }
+    
+    // First verify the chat session exists
+    const { data: session, error: sessionError } = await supabase
+      .from("chat_sessions")
+      .select("product_id")
+      .eq("id", sessionId)
+      .single();
+    
+    if (sessionError || !session) {
+      console.error("Error fetching chat session:", sessionError);
+      throw new Error("Chat session not found");
+    }
+    
+    // Verify the product belongs to the current user
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id")
+      .eq("id", session.product_id)
+      .eq("user_id", user.id)
+      .single();
+      
+    if (productError || !product) {
+      console.error("Error verifying product ownership:", productError);
+      throw new Error("Unauthorized access to these chat messages");
+    }
+    
+    // Now fetch the chat messages
     const { data, error } = await supabase
       .from("chat_messages")
       .select("*")
@@ -225,6 +279,27 @@ export async function getProductChatSessions(productId: string) {
   try {
     const supabase = createClient();
     
+    // Get the current user for authorization
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("You must be logged in to fetch chat sessions");
+    }
+    
+    // First verify the product belongs to the current user
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id")
+      .eq("id", productId)
+      .eq("user_id", user.id)
+      .single();
+    
+    if (productError || !product) {
+      console.error("Error fetching product or unauthorized access:", productError);
+      throw new Error("Unauthorized access to product");
+    }
+    
+    // Then fetch the chat sessions for this product
     const { data, error } = await supabase
       .from("chat_sessions")
       .select("*")
@@ -336,7 +411,26 @@ export async function getUserChatSessions() {
       throw new Error("You must be logged in to fetch chat sessions");
     }
     
-    // Get all chat sessions with product information
+    // First, get all products owned by the current user
+    const { data: userProducts, error: productsError } = await supabase
+      .from("products")
+      .select("id")
+      .eq("user_id", user.id);
+      
+    if (productsError) {
+      console.error("Error fetching user products:", productsError);
+      throw new Error(`Failed to fetch user products: ${productsError.message}`);
+    }
+    
+    // Extract product IDs
+    const productIds = userProducts?.map(product => product.id) || [];
+    
+    if (productIds.length === 0) {
+      // User has no products
+      return { success: true, data: [] };
+    }
+    
+    // Get all chat sessions for the user's products
     const { data, error } = await supabase
       .from("chat_sessions")
       .select(`
@@ -347,6 +441,7 @@ export async function getUserChatSessions() {
           metadata
         )
       `)
+      .in("product_id", productIds)
       .order("updated_at", { ascending: false });
 
     if (error) {

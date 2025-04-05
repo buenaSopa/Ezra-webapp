@@ -11,7 +11,7 @@ interface Product {
   name: string;
 }
 
-// Create a simple event emitter to trigger refreshes
+// Event to refresh product list when a new product is added
 const EVENT_NAME = "product-list-changed";
 export const refreshProductList = () => {
   // Dispatch an event when products are added or deleted
@@ -28,9 +28,18 @@ export function RecentProductsWrapper({ limit = 5 }: { limit?: number }) {
     setIsLoading(true);
     const supabase = createClient();
     
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    
     const { data } = await supabase
       .from("products")
       .select("id, name")
+      .eq("user_id", user.id) // Only fetch products belonging to the current user
       .not("metadata->is_competitor", "eq", true)
       .order("updated_at", { ascending: false })
       .limit(limit);

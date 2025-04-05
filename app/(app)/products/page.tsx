@@ -36,10 +36,31 @@ import {
 export default async function ProductsPage() {
   const supabase = createClient();
   
-  // Fetch products from the database, excluding competitors
+  // Get the current authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    // Handle unauthenticated users
+    return (
+      <div className="container mx-auto p-6 max-w-6xl">
+        <Card className="border-none shadow-none">
+          <CardContent className="text-center py-8">
+            <h2 className="text-lg font-medium mb-2">Authentication Required</h2>
+            <p className="text-muted-foreground mb-4">Please login to view your products.</p>
+            <Button asChild>
+              <a href="/login">Login</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Fetch products from the database, excluding competitors and ensuring user ownership
   const { data: products, error } = await supabase
     .from("products")
     .select("id, name, metadata, created_at")
+    .eq("user_id", user.id) // Only fetch products belonging to the current user
     .not("metadata->is_competitor", "eq", true) // Filter out products where is_competitor is true
     .order("created_at", { ascending: false });
   
