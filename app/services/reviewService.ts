@@ -31,7 +31,11 @@ type ReviewServiceResult = {
 export async function refreshAllReviews(
   productId: string, 
   forceRefresh = false,
-  includeCompetitors = true
+  includeCompetitors = true,
+  sources?: {
+    trustpilot?: boolean;
+    amazon?: boolean;
+  }
 ): Promise<ReviewServiceResult> {
   const supabase = createClient();
   
@@ -60,7 +64,7 @@ export async function refreshAllReviews(
   
   // First, refresh the main product
   try {
-    const mainProductResult = await refreshSingleProduct(productId, forceRefresh);
+    const mainProductResult = await refreshSingleProduct(productId, forceRefresh, sources);
     results.sources = mainProductResult.sources;
     results.errors = mainProductResult.errors;
     
@@ -99,7 +103,8 @@ export async function refreshAllReviews(
         try {
           const competitorResult = await refreshSingleProduct(
             competitor.id, 
-            forceRefresh
+            forceRefresh,
+            sources
           );
           
           results.competitorResults.push({
@@ -136,7 +141,11 @@ export async function refreshAllReviews(
 // Helper function that processes a single product
 async function refreshSingleProduct(
   productId: string, 
-  forceRefresh = false
+  forceRefresh = false,
+  sources?: {
+    trustpilot?: boolean;
+    amazon?: boolean;
+  }
 ): Promise<{
   sources: Array<{
     name: string;
@@ -205,8 +214,8 @@ async function refreshSingleProduct(
   // Define scraping tasks (we'll trigger these, not wait for them)
   const scrapingTasks = [];
 
-  // 1. Trustpilot Scraper (if product has a URL)
-  if (product.metadata?.url) {
+  // 1. Trustpilot Scraper (if product has a URL and trustpilot source is not disabled)
+  if (product.metadata?.url && (!sources || sources.trustpilot !== false)) {
     try {
       const trustpilotResult = await fetchTrustpilotReviews(product.metadata.url, productId);
       results.sources.push({
@@ -234,8 +243,8 @@ async function refreshSingleProduct(
     }
   }
 
-  // 2. Amazon Scraper (if product has an ASIN)
-  if (product.metadata?.amazon_asin) {
+  // 2. Amazon Scraper (if product has an ASIN and amazon source is not disabled)
+  if (product.metadata?.amazon_asin && (!sources || sources.amazon !== false)) {
     try {
       // Ensure the ASIN is trimmed to handle any accidental spaces
       const asin = product.metadata.amazon_asin.trim();

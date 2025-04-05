@@ -54,6 +54,13 @@ export async function getAmazonReviews(
 				"asin": trimmedAsin,
 				"productId": productId
 			},
+			"filter_by_ratings": [
+				"five_star",
+				"four_star",
+				"three_star",
+				"two_star",
+				"one_star"
+			],
 			"Proxy configuration": {
 				"useApifyProxy": false
 			}

@@ -81,10 +81,210 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [hasRunningJobs, setHasRunningJobs] = useState<boolean>(false);
   const [isStartingChat, setIsStartingChat] = useState<boolean>(false);
+  // Track original URL and ASIN for detecting changes
+  const [originalUrl, setOriginalUrl] = useState<string>('');
+  const [originalAsin, setOriginalAsin] = useState<string>('');
+  
+  // Helper function to check if reviews already exist for this product
+  const checkExistingReviews = async (product: Product) => {
+    if (!product) return false;
+    
+    try {
+      const productUrl = product.metadata?.url;
+      const amazonAsin = product.metadata?.amazon_asin;
+      let hasReviews = false;
+      
+      // Check for Trustpilot reviews if URL exists
+      if (productUrl) {
+        // Extract domain from URL for Trustpilot matching
+        let domain = productUrl;
+        try {
+          const url = new URL(domain);
+          domain = url.hostname;
+        } catch (error) {
+          console.warn("Failed to parse URL for domain extraction:", error);
+        }
+        
+        const { count: trustpilotCount, error: trustpilotError } = await supabase
+          .from("review_sources")
+          .select("*", { count: 'exact', head: true })
+          .eq("product_source", domain)
+          .eq("source", "trustpilot");
+        
+        if (!trustpilotError && trustpilotCount && trustpilotCount > 0) {
+          console.log(`Found ${trustpilotCount} existing Trustpilot reviews for domain ${domain}`);
+          hasReviews = true;
+        }
+      }
+      
+      // Check for Amazon reviews if ASIN exists
+      if (!hasReviews && amazonAsin) {
+        const { count: amazonCount, error: amazonError } = await supabase
+          .from("review_sources")
+          .select("*", { count: 'exact', head: true })
+          .eq("product_source", amazonAsin)
+          .eq("source", "amazon");
+        
+        if (!amazonError && amazonCount && amazonCount > 0) {
+          console.log(`Found ${amazonCount} existing Amazon reviews for ASIN ${amazonAsin}`);
+          hasReviews = true;
+        }
+      }
+      
+      // Check for direct reviews
+      const { count: directCount, error: directError } = await supabase
+        .from("reviews")
+        .select("*", { count: 'exact', head: true })
+        .eq("product_id", params.productId);
+      
+      if (!directError && directCount && directCount > 0) {
+        console.log(`Found ${directCount} existing direct reviews for product ${params.productId}`);
+        hasReviews = true;
+      }
+      
+      return hasReviews;
+    } catch (error) {
+      console.error("Error checking for existing reviews:", error);
+      return false; // Default to false to allow scraping if check fails
+    }
+  };
+
+  // Check for reviews for a specific source (Trustpilot domain or Amazon ASIN)
+  const checkExistingSourceReviews = async (source: string, sourceType: 'trustpilot' | 'amazon') => {
+    try {
+      // For Trustpilot, extract domain from URL
+      let sourceValue = source;
+      if (sourceType === 'trustpilot' && source) {
+        try {
+          const url = new URL(source);
+          sourceValue = url.hostname;
+        } catch (error) {
+          console.warn("Failed to parse URL for domain extraction:", error);
+        }
+      }
+      
+      const { count, error } = await supabase
+        .from("review_sources")
+        .select("*", { count: 'exact', head: true })
+        .eq("product_source", sourceValue)
+        .eq("source", sourceType);
+      
+      if (error) {
+        console.error(`Error checking for ${sourceType} reviews:`, error);
+        return false;
+      }
+      
+      return count && count > 0;
+    } catch (error) {
+      console.error(`Error in checkExistingSourceReviews for ${sourceType}:`, error);
+      return false;
+    }
+  };
+
+  // Check and scrape only for new sources
+  const checkAndScrapeFreshSources = async (product: Product) => {
+    if (!product) return;
+
+    const newUrl = product.metadata?.url || '';
+    const newAsin = product.metadata?.amazon_asin || '';
+    let needsScraping = false;
+    let scrapeSources: { trustpilot: boolean, amazon: boolean } = { trustpilot: false, amazon: false };
+    
+    // Check if URL changed and if new URL has reviews
+    if (newUrl && newUrl !== originalUrl) {
+      const hasTrustpilotReviews = await checkExistingSourceReviews(newUrl, 'trustpilot');
+      if (!hasTrustpilotReviews) {
+        console.log(`URL changed from ${originalUrl} to ${newUrl}, needs Trustpilot scraping`);
+        needsScraping = true;
+        scrapeSources.trustpilot = true;
+      } else {
+        console.log(`URL changed but Trustpilot reviews already exist for ${newUrl}`);
+      }
+    }
+    
+    // Check if ASIN changed and if new ASIN has reviews
+    if (newAsin && newAsin !== originalAsin) {
+      const hasAmazonReviews = await checkExistingSourceReviews(newAsin, 'amazon');
+      if (!hasAmazonReviews) {
+        console.log(`ASIN changed from ${originalAsin} to ${newAsin}, needs Amazon scraping`);
+        needsScraping = true;
+        scrapeSources.amazon = true;
+      } else {
+        console.log(`ASIN changed but Amazon reviews already exist for ${newAsin}`);
+      }
+    }
+    
+    // If either source needs scraping, initiate targeted scraping
+    if (needsScraping) {
+      setIsRefreshingReviews(true);
+      try {
+        // Pass the specific sources to scrape to refreshAllReviews
+        console.log(`Initiating selective scraping for: ${JSON.stringify(scrapeSources)}`);
+        const results = await refreshAllReviews(
+          params.productId, 
+          true, // Force refresh
+          false, // Don't include competitors
+          {
+            // Only set to true for sources that need scraping (undefined means use default behavior)
+            // For sources we don't want to scrape, explicitly set to false to disable them
+            trustpilot: scrapeSources.trustpilot ? true : false,
+            amazon: scrapeSources.amazon ? true : false
+          }
+        );
+        
+        if (!results.success) {
+          toast.error("Error initiating selective review scraping", {
+            description: results.error || "An unknown error occurred"
+          });
+        } else {
+          let sourceDescription = '';
+          if (scrapeSources.trustpilot && scrapeSources.amazon) {
+            sourceDescription = 'website and Amazon';
+          } else if (scrapeSources.trustpilot) {
+            sourceDescription = 'website';
+          } else if (scrapeSources.amazon) {
+            sourceDescription = 'Amazon';
+          }
+          
+          toast.success("Scraping new review sources", {
+            description: `Started scraping for ${sourceDescription} reviews.`
+          });
+        }
+      } catch (error) {
+        console.error("Error in selective scraping:", error);
+        toast.error("Error initiating selective review scraping", {
+          description: error instanceof Error ? error.message : "An unknown error occurred"
+        });
+      } finally {
+        setIsRefreshingReviews(false);
+      }
+    } else {
+      console.log("No new sources to scrape");
+    }
+    
+    // Update the tracking variables
+    setOriginalUrl(newUrl);
+    setOriginalAsin(newAsin);
+  };
   
   // Define the handleRefreshAllReviews function with useCallback
   const handleRefreshAllReviews = useCallback(async (includeCompetitors = false, skipToast = false) => {
     if (!product) return;
+    
+    // First check if reviews already exist for this product
+    const hasExistingReviews = await checkExistingReviews(product);
+    
+    if (hasExistingReviews) {
+      console.log("Skipping review scraping - reviews already exist for this product");
+      
+      if (!skipToast) {
+        toast.info("Reviews already exist", {
+          description: "This product already has reviews. No need to scrape again."
+        });
+      }
+      
+      return;
+    }
     
     setIsRefreshingReviews(true);
     
@@ -221,21 +421,43 @@ export default function ProductPage({ params }: ProductPageProps) {
       } else {
         setProduct(data);
         
+        // Store original URL and ASIN values for change detection
+        setOriginalUrl(data.metadata?.url || '');
+        setOriginalAsin(data.metadata?.amazon_asin || '');
+        
         // Check if this is a newly created product without reviews
         if (!data.last_reviews_scraped_at && 
             (data.metadata?.url || data.metadata?.amazon_asin) && 
             !isRefreshingReviews) {
-          console.log("Auto-triggering review scraping for new product");
           
-          // Wait a moment to allow UI to render first
-          setTimeout(() => {
-            handleRefreshAllReviews(true, true).catch(err => {
-              console.error("Error in auto-triggered scraping:", err);
-              toast.error("Error starting automatic review scraping", {
-                description: err instanceof Error ? err.message : "An unknown error occurred"
+          // Check if reviews already exist for this product
+          const hasExistingReviews = await checkExistingReviews(data);
+          
+          if (!hasExistingReviews) {
+            console.log("Auto-triggering review scraping for new product");
+            
+            // Wait a moment to allow UI to render first
+            setTimeout(() => {
+              handleRefreshAllReviews(true, true).catch(err => {
+                console.error("Error in auto-triggered scraping:", err);
+                toast.error("Error starting automatic review scraping", {
+                  description: err instanceof Error ? err.message : "An unknown error occurred"
+                });
               });
-            });
-          }, 1000);
+            }, 1000);
+          } else {
+            console.log("Skipping auto-scraping - reviews already exist for this product");
+            
+            // Update the last_reviews_scraped_at field to avoid future auto-triggers
+            const { error: updateError } = await supabase
+              .from("products")
+              .update({ last_reviews_scraped_at: new Date().toISOString() })
+              .eq("id", params.productId);
+            
+            if (updateError) {
+              console.error("Error updating last_reviews_scraped_at:", updateError);
+            }
+          }
         }
       }
       
@@ -621,10 +843,16 @@ export default function ProductPage({ params }: ProductPageProps) {
     if (error) {
       console.error("Error updating product:", error);
       alert("Error updating product: " + error.message);
+      setIsSaving(false);
+      return;
     }
     
     setIsSaving(false);
     setIsEditing(false);
+    
+    // After successful save, check for URL or ASIN changes and trigger scraping if needed
+    await checkAndScrapeFreshSources(product);
+    
     router.refresh();
   };
   
