@@ -325,7 +325,7 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         </div>
         <div className="grid gap-2">
           <label htmlFor="productUrl" className="text-sm font-medium">
-            Product URL
+            Brand URL
           </label>
           <Input
             id="productUrl"

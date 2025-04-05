@@ -114,7 +114,7 @@ export function ProductCompetitors({
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div>
-                          <Label htmlFor={`comp-url-${relation.id}`} className="text-xs mb-1">Product URL</Label>
+                          <Label htmlFor={`comp-url-${relation.id}`} className="text-xs mb-1">Brand URL</Label>
                           <Input
                             id={`comp-url-${relation.id}`}
                             value={editedCompetitor.metadata?.url || ''}

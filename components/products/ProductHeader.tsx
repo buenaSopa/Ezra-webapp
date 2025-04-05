@@ -136,7 +136,7 @@ export function ProductHeader({
               <Input
                 value={product.metadata.url || ''}
                 onChange={(e) => onMetadataChange('url', e.target.value)}
-                placeholder="Add product URL"
+                placeholder="Add brand URL"
                 className="mt-1 text-sm"
               />
             ) : product.metadata.url ? (
