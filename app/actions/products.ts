@@ -155,20 +155,62 @@ export async function createProduct({
     // --- Start: Trigger asynchronous review scraping ---
     console.log(`Triggering background review scraping for product ${productId}...`);
     try {
+      // Check if reviews already exist before triggering scrapes
+      const checkExistingReviews = async (source: 'trustpilot' | 'amazon', sourceValue: string) => {
+        try {
+          // For Trustpilot, try to extract domain
+          let valueToCheck = sourceValue;
+          
+          // Check for existing reviews
+          const { count, error } = await supabase
+            .from("review_sources")
+            .select("id", { count: 'exact', head: true })
+            .eq("product_source", valueToCheck)
+            .eq("source", source)
+            .limit(1);
+          
+          if (error) {
+            console.error(`Error checking for existing ${source} reviews:`, error);
+            return false;
+          }
+          
+          return count !== null && count > 0;
+        } catch (error) {
+          console.error(`Error in checkExistingReviews for ${source}:`, error);
+          return false;
+        }
+      };
+
       // Trigger Amazon scrape if ASIN exists
       if (amazonAsin && amazonAsin.trim()) {
-        console.log(` -> Triggering Amazon scrape for ASIN: ${amazonAsin.trim()}`);
-        // Intentionally not awaited - fire and forget
-        getAmazonReviews(amazonAsin.trim(), productId);
+        const asin = amazonAsin.trim();
+        // First check if reviews already exist
+        const hasAmazonReviews = await checkExistingReviews('amazon', asin);
+        
+        if (!hasAmazonReviews) {
+          console.log(` -> Triggering Amazon scrape for ASIN: ${asin} (no existing reviews)`);
+          // Intentionally not awaited - fire and forget
+          getAmazonReviews(asin, productId);
+        } else {
+          console.log(` -> Skipping Amazon scrape for ASIN: ${asin} (reviews already exist)`);
+        }
       } else {
         console.log(" -> Skipping Amazon scrape (no ASIN provided).");
       }
 
       // Trigger Trustpilot scrape if URL exists
       if (url && url.trim()) {
-        console.log(` -> Triggering Trustpilot scrape for URL: ${url.trim()}`);
-        // Intentionally not awaited - fire and forget
-        startTrustpilotReviewScraping(url.trim(), productId);
+        const cleanUrl = url.trim();
+        // First check if reviews already exist
+        const hasTrustpilotReviews = await checkExistingReviews('trustpilot', cleanUrl);
+        
+        if (!hasTrustpilotReviews) {
+          console.log(` -> Triggering Trustpilot scrape for URL: ${cleanUrl} (no existing reviews)`);
+          // Intentionally not awaited - fire and forget
+          startTrustpilotReviewScraping(cleanUrl, productId);
+        } else {
+          console.log(` -> Skipping Trustpilot scrape for URL: ${cleanUrl} (reviews already exist)`);
+        }
       } else {
         console.log(" -> Skipping Trustpilot scrape (no URL provided).");
       }

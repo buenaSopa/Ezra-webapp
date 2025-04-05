@@ -98,12 +98,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       if (productUrl) {
         // Extract domain from URL for Trustpilot matching
         let domain = productUrl;
-        try {
-          const url = new URL(domain);
-          domain = url.hostname;
-        } catch (error) {
-          console.warn("Failed to parse URL for domain extraction:", error);
-        }
         
         const { count: trustpilotCount, error: trustpilotError } = await supabase
           .from("review_sources")
@@ -154,14 +148,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     try {
       // For Trustpilot, extract domain from URL
       let sourceValue = source;
-      if (sourceType === 'trustpilot' && source) {
-        try {
-          const url = new URL(source);
-          sourceValue = url.hostname;
-        } catch (error) {
-          console.warn("Failed to parse URL for domain extraction:", error);
-        }
-      }
       
       const { count, error } = await supabase
         .from("review_sources")
@@ -225,8 +211,6 @@ export default function ProductPage({ params }: ProductPageProps) {
           true, // Force refresh
           false, // Don't include competitors
           {
-            // Only set to true for sources that need scraping (undefined means use default behavior)
-            // For sources we don't want to scrape, explicitly set to false to disable them
             trustpilot: scrapeSources.trustpilot ? true : false,
             amazon: scrapeSources.amazon ? true : false
           }
