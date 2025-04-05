@@ -138,7 +138,56 @@ export async function refreshAllReviews(
   return results;
 }
 
-// Helper function that processes a single product
+// Add this new function to check if at least one review exists for a specific source
+async function checkSourceHasReviews(
+  supabase: any,
+  product: any,
+  source: 'trustpilot' | 'amazon'
+): Promise<boolean> {
+  console.log('checkSourceHasReviews', source, product);
+  try {
+    if (source === 'trustpilot' && product.metadata?.url) {
+      // Extract domain from URL for Trustpilot matching
+      let domain = product.metadata.url;
+      
+      // More efficient query that just checks existence
+      const { data, error } = await supabase
+        .from("review_sources")
+        .select("id") // Only select the id field, which is more efficient
+        .eq("product_source", domain)
+        .eq("source", "trustpilot")
+        .limit(1); // Limit to just 1 result
+
+      if (!error && data && data.length > 0) {
+        console.log(`Trustpilot reviews already exist for domain ${domain}, skipping scraping`);
+        return true;
+      }
+    } 
+    else if (source === 'amazon' && product.metadata?.amazon_asin) {
+      const asin = product.metadata.amazon_asin.trim();
+      
+      // Just check if at least one review exists
+      const { count, error } = await supabase
+        .from("review_sources")
+        .select("id") // Only select the id field, which is more efficient
+        .eq("product_source", asin)
+        .eq("source", "amazon")
+        .limit(1);
+      
+      if (!error && count && count > 0) {
+        console.log(`Amazon reviews already exist for ASIN ${asin}, skipping scraping`);
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error(`Error checking for existing ${source} reviews:`, error);
+    return false; // Default to false to allow scraping if check fails
+  }
+}
+
+// Modify refreshSingleProduct to use the new check function
 async function refreshSingleProduct(
   productId: string, 
   forceRefresh = false,
@@ -172,6 +221,7 @@ async function refreshSingleProduct(
 
   const supabase = createClient();
   
+  console.log('refreshSingleProduct', productId);
   // Get product data
   const { data: product, error: productError } = await supabase
     .from('products')
@@ -191,89 +241,94 @@ async function refreshSingleProduct(
     };
   }
 
-  // Check if we need a refresh based on last_reviews_scraped_at
-  let needsRefresh = forceRefresh;
-  if (!forceRefresh && product.last_reviews_scraped_at) {
-    const lastScraped = new Date(product.last_reviews_scraped_at);
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
-    needsRefresh = lastScraped < oneWeekAgo;
-  }
-
-  if (!needsRefresh) {
-    return {
-      sources: [],
-      errors: 0,
-      fromCache: true,
-      message: 'Using cached reviews (less than a week old)',
-      cacheDate: product.last_reviews_scraped_at
-    };
-  }
-
-  // Define scraping tasks (we'll trigger these, not wait for them)
-  const scrapingTasks = [];
+  console.log('product', product);
 
   // 1. Trustpilot Scraper (if product has a URL and trustpilot source is not disabled)
   if (product.metadata?.url && (!sources || sources.trustpilot !== false)) {
-    try {
-      const trustpilotResult = await fetchTrustpilotReviews(product.metadata.url, productId);
-      results.sources.push({
-        name: 'trustpilot',
-        success: trustpilotResult.success,
-        message: trustpilotResult.success 
-          ? 'Trustpilot review scraping initiated' 
-          : 'Failed to initiate Trustpilot review scraping',
-        data: trustpilotResult,
-        error: trustpilotResult.error
-      });
-      
-      if (!trustpilotResult.success) {
+    // Check if reviews already exist for Trustpilot
+    const trustpilotHasReviews = await checkSourceHasReviews( supabase, product, 'trustpilot');
+    
+    if (!trustpilotHasReviews) {
+      // No existing reviews, trigger scraping
+      try {
+        const trustpilotResult = await fetchTrustpilotReviews(product.metadata.url, productId);
+        results.sources.push({
+          name: 'trustpilot',
+          success: trustpilotResult.success,
+          message: trustpilotResult.success 
+            ? 'Trustpilot review scraping initiated' 
+            : 'Failed to initiate Trustpilot review scraping',
+          data: trustpilotResult,
+          error: trustpilotResult.error
+        });
+        
+        if (!trustpilotResult.success) {
+          results.errors++;
+        }
+      } catch (error) {
+        console.error('Error triggering Trustpilot review scraping:', error);
+        results.sources.push({
+          name: 'trustpilot',
+          success: false,
+          message: 'Failed to initiate Trustpilot review scraping',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
         results.errors++;
       }
-    } catch (error) {
-      console.error('Error triggering Trustpilot review scraping:', error);
+    } else {
+      // Reviews already exist, mark as successful from cache
       results.sources.push({
         name: 'trustpilot',
-        success: false,
-        message: 'Failed to initiate Trustpilot review scraping',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        success: true,
+        message: 'Trustpilot reviews already exist in database, skipping scraping'
       });
-      results.errors++;
     }
   }
 
   // 2. Amazon Scraper (if product has an ASIN and amazon source is not disabled)
   if (product.metadata?.amazon_asin && (!sources || sources.amazon !== false)) {
-    try {
-      // Ensure the ASIN is trimmed to handle any accidental spaces
-      const asin = product.metadata.amazon_asin.trim();
-      
-      // Trigger Amazon scraping without awaiting full completion
-      const amazonResult = await fetchAmazonReviews(asin, productId, 500);
-      
-      results.sources.push({
-        name: 'amazon',
-        success: amazonResult.success,
-        message: amazonResult.success 
-          ? 'Amazon review scraping initiated' 
-          : 'Failed to initiate Amazon review scraping',
-        data: amazonResult,
-        error: amazonResult.error
-      });
-      
-      if (!amazonResult.success) {
+    // Check if reviews already exist for Amazon
+    const amazonHasReviews = await checkSourceHasReviews(supabase, product, 'amazon');
+    
+    if (!amazonHasReviews) {
+      // No existing reviews, trigger scraping
+      try {
+        // Ensure the ASIN is trimmed to handle any accidental spaces
+        const asin = product.metadata.amazon_asin.trim();
+        
+        // Trigger Amazon scraping without awaiting full completion
+        const amazonResult = await fetchAmazonReviews(asin, productId, 500);
+        
+        results.sources.push({
+          name: 'amazon',
+          success: amazonResult.success,
+          message: amazonResult.success 
+            ? 'Amazon review scraping initiated' 
+            : 'Failed to initiate Amazon review scraping',
+          data: amazonResult,
+          error: amazonResult.error
+        });
+        
+        if (!amazonResult.success) {
+          results.errors++;
+        }
+      } catch (error) {
+        console.error('Error triggering Amazon review scraping:', error);
+        results.sources.push({
+          name: 'amazon',
+          success: false,
+          message: 'Failed to initiate Amazon review scraping',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
         results.errors++;
       }
-    } catch (error) {
-      console.error('Error triggering Amazon review scraping:', error);
+    } else {
+      // Reviews already exist, mark as successful from cache
       results.sources.push({
         name: 'amazon',
-        success: false,
-        message: 'Failed to initiate Amazon review scraping',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        success: true,
+        message: 'Amazon reviews already exist in database, skipping scraping'
       });
-      results.errors++;
     }
   }
 
