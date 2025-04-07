@@ -17,6 +17,7 @@ const ACTORS = {
 
 export async function POST(request: NextRequest) {
   console.log("Received Apify webhook request");
+  const { updateScrapingJobStatus } = await import('@/app/actions/scraping-jobs');
 
   // 1. Parse and validate the payload
   let payload: any;
@@ -29,42 +30,34 @@ export async function POST(request: NextRequest) {
       console.log("Webhook payload:", JSON.stringify(payload, null, 2));
     } catch (e) {
       console.error("Failed to parse webhook payload as JSON:", e);
+      // No job status update needed here as we don't have the run ID yet
       return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
     }
-    
-    // 2. Verify webhook signature if secret is set
-    // if (WEBHOOK_SECRET) {
-    //   const signature = request.headers.get('x-apify-webhook-signature');
-    //   if (!signature) {
-    //     console.error("Missing webhook signature");
-    //     return NextResponse.json({ error: 'Missing signature header' }, { status: 401 });
-    //   }
 
-    //   const hash = crypto
-    //     .createHmac('sha256', WEBHOOK_SECRET)
-    //     .update(text)
-    //     .digest('hex');
-
-    //   if (hash !== signature) {
-    //     console.error("Invalid webhook signature");
-    //     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    //   }
-    // } else {
-    //   console.warn("APIFY_WEBHOOK_SECRET not set - skipping signature verification");
-    // }
   } catch (error) {
     console.error("Failed to process webhook request:", error);
+    // No job status update needed here as we don't have the run ID yet
     return NextResponse.json({ error: 'Failed to process webhook request' }, { status: 400 });
   }
 
+  // Extract run ID early so we can use it for status updates in all cases
+  const runId = payload?.resource?.id;
+  
   // 3. Validate event type
   if (payload.eventType !== 'ACTOR.RUN.SUCCEEDED') {
     console.log(`Ignoring event type: ${payload.eventType}`);
+    // If we have a run ID and it's not a success event, mark it as failed
+    if (runId) {
+      await updateScrapingJobStatus({
+        actorRunId: runId,
+        status: 'failed',
+        errorMessage: `Unexpected event type: ${payload.eventType}`
+      });
+    }
     return NextResponse.json({ message: 'Event type not processed' }, { status: 200 });
   }
 
   // 4. Extract necessary data from payload
-  // The resource contains the actual run data
   const resource = payload.resource;
   const actorId = resource?.actId;
   const datasetId = resource?.defaultDatasetId;
@@ -74,6 +67,13 @@ export async function POST(request: NextRequest) {
 
   if (!actorId || !datasetId || !keyValueStoreId) {
     console.error("Missing required data:", { actorId, datasetId, keyValueStoreId });
+    if (runId) {
+      await updateScrapingJobStatus({
+        actorRunId: runId,
+        status: 'failed',
+        errorMessage: 'Missing required data from webhook payload'
+      });
+    }
     return NextResponse.json({ error: 'Missing required data' }, { status: 400 });
   }
 
@@ -84,18 +84,25 @@ export async function POST(request: NextRequest) {
     const result = await APIFY_CLIENT.dataset(datasetId).listItems();
     items = result.items;
     console.log(`Fetched ${items.length} items from dataset`);
-    } catch (error) {
+  } catch (error) {
     console.error("Failed to fetch dataset:", error);
+    await updateScrapingJobStatus({
+      actorRunId: runId,
+      status: 'failed',
+      errorMessage: 'Failed to fetch dataset from Apify'
+    });
     return NextResponse.json({ error: 'Failed to fetch dataset' }, { status: 500 });
   }
 
   if (!items?.length) {
     console.log("No items in dataset");
+    await updateScrapingJobStatus({
+      actorRunId: runId,
+      status: 'completed',
+      errorMessage: 'No reviews found to process'
+    });
     return NextResponse.json({ message: 'No items to process' }, { status: 200 });
   }
-
-  // Import the scraping jobs functions
-  const { updateScrapingJobStatus } = await import('@/app/actions/scraping-jobs');
 
   // 6. Process based on actor type
   try {
@@ -108,6 +115,11 @@ export async function POST(request: NextRequest) {
         const input = await APIFY_CLIENT.keyValueStore(keyValueStoreId).getRecord('INPUT') as any;
         
         if (!input || !input.value) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: 'Failed to fetch input from key-value store'
+          });
           throw new Error("Failed to fetch input from key-value store");
         }
         
@@ -118,10 +130,20 @@ export async function POST(request: NextRequest) {
         productId = input.value.customData?.productId;
         
         if (!companyWebsite) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: 'Missing companyWebsite in input customData'
+          });
           throw new Error("Missing companyWebsite in input customData");
         }
         
         if (!productId) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: 'Missing productId in input customData'
+          });
           throw new Error("Missing productId in input customData");
         }
         
@@ -130,12 +152,21 @@ export async function POST(request: NextRequest) {
         // Extract domain from URL for storage
         let domain = companyWebsite;
         
-        // Store the reviews
-        await storeTrustpilotReviews(items as unknown as TrustpilotReview[], domain);
+        try {
+          // Store the reviews
+          await storeTrustpilotReviews(items as unknown as TrustpilotReview[], domain);
+        } catch (error) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: `Failed to store Trustpilot reviews: ${error instanceof Error ? error.message : 'Unknown error'}`
+          });
+          throw error;
+        }
         
         // Update the scraping job status to indexing
         await updateScrapingJobStatus({
-          actorRunId: resource.id,
+          actorRunId: runId,
           status: 'indexing'
         });
         
@@ -151,13 +182,13 @@ export async function POST(request: NextRequest) {
         // Update the job status based on indexing result
         if (indexingResult.success) {
           await updateScrapingJobStatus({
-            actorRunId: resource.id,
+            actorRunId: runId,
             status: 'indexed',
             indexedAt: new Date().toISOString()
           });
         } else {
           await updateScrapingJobStatus({
-            actorRunId: resource.id,
+            actorRunId: runId,
             status: 'index_failed',
             errorMessage: indexingResult.error || 'Unknown error during indexing'
           });
@@ -172,6 +203,11 @@ export async function POST(request: NextRequest) {
         const input = await APIFY_CLIENT.keyValueStore(keyValueStoreId).getRecord('INPUT') as any;
         
         if (!input || !input.value) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: 'Failed to fetch input from key-value store'
+          });
           throw new Error("Failed to fetch input from key-value store");
         }
         
@@ -195,21 +231,40 @@ export async function POST(request: NextRequest) {
         productId = input.value.customData?.productId;
         
         if (!asin) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: 'Missing ASIN in input'
+          });
           throw new Error("Missing ASIN in input");
         }
         
         if (!productId) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: 'Missing productId in input customData'
+          });
           throw new Error("Missing productId in input customData");
         }
         
         console.log(`Processing Amazon reviews for ASIN ${asin}, productId: ${productId}`);
         
-        // Store the reviews
-        await storeAmazonReviewsInDatabase(items, asin);
+        try {
+          // Store the reviews
+          await storeAmazonReviewsInDatabase(items, asin);
+        } catch (error) {
+          await updateScrapingJobStatus({
+            actorRunId: runId,
+            status: 'failed',
+            errorMessage: `Failed to store Amazon reviews: ${error instanceof Error ? error.message : 'Unknown error'}`
+          });
+          throw error;
+        }
         
         // Update the scraping job status to indexing
         await updateScrapingJobStatus({
-          actorRunId: resource.id,
+          actorRunId: runId,
           status: 'indexing'
         });
         
@@ -225,13 +280,13 @@ export async function POST(request: NextRequest) {
         // Update the job status based on indexing result
         if (indexingResult.success) {
           await updateScrapingJobStatus({
-            actorRunId: resource.id,
+            actorRunId: runId,
             status: 'indexed',
             indexedAt: new Date().toISOString()
           });
         } else {
           await updateScrapingJobStatus({
-            actorRunId: resource.id,
+            actorRunId: runId,
             status: 'index_failed',
             errorMessage: indexingResult.error || 'Unknown error during indexing'
           });
@@ -241,6 +296,11 @@ export async function POST(request: NextRequest) {
       }
 
       default:
+        await updateScrapingJobStatus({
+          actorRunId: runId,
+          status: 'failed',
+          errorMessage: `Unknown actor ID: ${actorId}`
+        });
         throw new Error(`Unknown actor ID: ${actorId}`);
     }
 
@@ -252,10 +312,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Failed to process reviews:", error);
     
-    // Update the scraping job status to failed
+    // Update the scraping job status to failed if not already updated
     try {
       await updateScrapingJobStatus({
-        actorRunId: resource?.id,
+        actorRunId: runId,
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : 'Unknown error processing reviews'
       });
