@@ -49,7 +49,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
   const router = useRouter()
   const [competitors, setCompetitors] = useState<Competitor[]>([])
   const [productFiles, setProductFiles] = useState<File[]>([])
-  const [resources, setResources] = useState<Resource[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAdditionalInfoOpen, setIsAdditionalInfoOpen] = useState(false)
   const [isCompetitorsOpen, setIsCompetitorsOpen] = useState(false)
@@ -82,9 +81,23 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
   }
 
   const handleProductFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || [])
-    console.log('Product files added:', files.map(f => f.name))
-    setProductFiles([...productFiles, ...files])
+    if (!event.target.files || event.target.files.length === 0) {
+      console.log('No files selected');
+      return;
+    }
+    
+    const files = Array.from(event.target.files);
+    console.log('Product files added:', files.map(f => f.name));
+    
+    // Create a copy of the files for state update
+    const newFiles = [...files];
+    
+    // Update state with the new files
+    setProductFiles(prevFiles => {
+      const updatedFiles = [...prevFiles, ...newFiles];
+      console.log('Updated productFiles state:', updatedFiles.map(f => f.name));
+      return updatedFiles;
+    });
   }
 
   const handleCompetitorFileChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,34 +118,35 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     setCompetitors(updatedCompetitors)
   }
 
-  const handleAddResource = () => {
-    setResources([...resources, { type: 'document', title: '', file: null }])
-  }
-
-  const handleRemoveResource = (index: number) => {
-    setResources(resources.filter((_, i) => i !== index))
-  }
-
-  const handleResourceChange = (index: number, field: keyof Resource, value: any) => {
-    const updatedResources = [...resources]
-    updatedResources[index] = {
-      ...updatedResources[index],
-      [field]: value
-    }
-    
-    // Log when a file is added to a resource
-    if (field === 'file' && value) {
-      console.log(`Resource ${index} file added:`, value.name)
-    }
-    
-    setResources(updatedResources)
-  }
-
   const handleCompetitorCollapsibleChange = (index: number, isOpen: boolean) => {
     const newStates = [...competitorCollapsibleStates]
     newStates[index] = isOpen
     setCompetitorCollapsibleStates(newStates)
   }
+  
+  // File handling with drag and drop support
+  const handleFileDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!event.dataTransfer.files || event.dataTransfer.files.length === 0) {
+      return;
+    }
+    
+    const files = Array.from(event.dataTransfer.files);
+    console.log('Files dropped:', files.map(f => f.name));
+    
+    setProductFiles(prevFiles => {
+      const updatedFiles = [...prevFiles, ...files];
+      console.log('Updated productFiles state after drop:', updatedFiles.map(f => f.name));
+      return updatedFiles;
+    });
+  };
+  
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   // Helper function to convert File to base64
   const fileToBase64 = (file: File): Promise<string> => {
@@ -149,23 +163,19 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     
     // Get form data
     const formData = new FormData(e.currentTarget)
+    const productName = formData.get("productName") as string
     const productUrl = formData.get("productUrl") as string
     const productAmazonAsin = formData.get("productAmazonAsin") as string
     
-    // Check if we have either URL/ASIN or manual reviews
-    const hasUrlOrAsin = productUrl || productAmazonAsin
-    const hasManualReviews = resources.some(r => r.file)
-
-    if (!hasUrlOrAsin && !hasManualReviews) {
-      toast.error("Please provide either a Product URL/Amazon ASIN or upload review files")
-      return
+    // Only check if we have a product name - no other validation
+    if (!productName) {
+      toast.error("Please provide a product name");
+      return;
     }
     
     setIsSubmitting(true)
     
     try {
-      const productName = formData.get("productName") as string
-      
       // Prepare data for API call
       const productData = {
         name: productName,
@@ -176,10 +186,7 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
           url: c.url,
           amazonAsin: c.amazonAsin,
         })),
-        resources: resources.filter(r => r.title && r.file).map(r => ({
-          type: 'document',
-          title: r.title,
-        }))
+        resources: [] // Empty resources array, since we're handling files directly
       }
 
       console.log('Product files before submission:', productFiles.map(f => f.name))
@@ -187,10 +194,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         name: c.name, 
         files: c.files.map(f => f.name) 
       })))
-      console.log('Resource files before submission:', resources
-        .filter(r => r.file)
-        .map(r => ({ title: r.title, fileName: r.file?.name }))
-      )
 
       // Call the server action to create the product
       const result = await createProduct(productData)
@@ -205,8 +208,7 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         ...productFiles.map(file => ({ file, type: 'document', title: file.name })),
         ...competitors.flatMap((competitor, index) => 
           competitor.files.map(file => ({ file, type: 'document', title: `${competitor.name} - ${file.name}` }))
-        ),
-        ...resources.filter(r => r.file).map(r => ({ file: r.file!, type: r.type, title: r.title }))
+        )
       ]
       
       console.log(`All files to upload (${allFiles.length}):`, allFiles.map(f => ({ 
@@ -280,7 +282,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       // Reset form
       setCompetitors([])
       setProductFiles([])
-      setResources([])
       
       // Call the success callback
       if (onSuccess) {
@@ -347,14 +348,82 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
           />
         </div>
         
-        {/* Message explaining requirements */}
-        <p className="text-xs text-amber-500">Please provide either a Product URL/Amazon ASIN or upload review files below.</p>
+        {/* Direct file upload option */}
+        <div className="grid gap-2">
+          <div className="flex justify-between items-center">
+            <label htmlFor="productFiles" className="text-sm font-medium">
+              Upload Files Directly
+            </label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                // Trigger the hidden file input
+                const fileInput = document.getElementById('productFiles') as HTMLInputElement;
+                if (fileInput) fileInput.click();
+              }}
+            >
+              <Upload className="h-4 w-4 mr-1" /> Select Files
+            </Button>
+          </div>
+          
+          <Input
+            id="productFiles"
+            name="productFiles"
+            type="file"
+            multiple
+            onChange={handleProductFileChange}
+            accept=".csv,.xlsx,.xls,.txt,.pdf,.doc,.docx"
+            className="hidden" // Hide the default file input
+          />
+          
+          {productFiles.length > 0 ? (
+            <div className="grid gap-2 mt-2 border rounded-md p-3">
+              <div className="text-sm font-medium text-green-600 flex items-center mb-2">
+                <Upload className="h-4 w-4 mr-2" />
+                {productFiles.length} file(s) selected
+              </div>
+              
+              {productFiles.map((file, fileIndex) => (
+                <div key={fileIndex} className="flex items-center justify-between bg-muted p-2 rounded-md">
+                  <span className="text-sm truncate">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveProductFile(fileIndex)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer"
+                 onClick={() => {
+                   const fileInput = document.getElementById('productFiles') as HTMLInputElement;
+                   if (fileInput) fileInput.click();
+                 }}
+                 onDrop={handleFileDrop}
+                 onDragOver={handleDragOver}
+                 onDragEnter={handleDragOver}>
+              <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Drag and drop files here, or click to browse
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Supported formats: CSV, PDF, DOC, TXT
+              </p>
+            </div>
+          )}
+        </div>
       </div>
       
-      {/* <Separator className="my-2" /> */}
+      <Separator className="my-2" />
       
       {/* Competitors Section */}
-      {/* <div className="grid gap-4 py-4">
+      <div className="grid gap-4 py-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium">Competitors</h3>
           <Button 
@@ -462,83 +531,9 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             ))}
           </div>
         )}
-      </div> */}
-      
-      {/* <Separator className="my-2" /> */}
-      
-      {/* Additional Resources Section */}
-      <div className="grid gap-4 py-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium">Manual Review Upload</h3>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAddResource}
-          >
-            <Upload className="h-4 w-4 mr-1" /> Upload Reviews
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Upload files containing reviews. Supported formats: CSV, Excel, Text files, or PDFs.
-        </p>
-        
-        {resources.length === 0 && (
-          <p className="text-sm text-muted-foreground italic">No review files uploaded yet.</p>
-        )}
-        
-        {resources.map((resource, index) => (
-          <Card key={index} className="p-4">
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="text-sm font-medium">Review File {index + 1}</h4>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => handleRemoveResource(index)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="grid gap-3">
-              <div className="grid gap-1">
-                <label className="text-sm">Upload File</label>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    type="file"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      handleResourceChange(index, 'file', file);
-                      if (file) {
-                        // Use file name without extension as the title
-                        const titleWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
-                        handleResourceChange(index, 'title', titleWithoutExtension);
-                      }
-                    }}
-                    className="flex-1"
-                    accept=".csv,.xlsx,.xls,.txt,.pdf,.doc,.docx"
-                  />
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p>Supported formats:</p>
-                    <ul className="list-disc list-inside pl-2">
-                      <li>CSV/Excel: Should include columns for review text, rating, and date</li>
-                      <li>Text/PDF/Doc: Will be processed to extract review content</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              {resource.file && (
-                <div className="bg-muted p-2 rounded-md">
-                  <p className="text-sm flex items-center">
-                    <Upload className="h-4 w-4 mr-2" />
-                    {resource.file.name}
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
       </div>
+      
+      <Separator className="my-2" />
       
       <DialogFooter>
         <Button type="submit" disabled={isSubmitting}>

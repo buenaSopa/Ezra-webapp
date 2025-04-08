@@ -961,13 +961,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onMetadataChange={handleMetadataChange}
               />
               
-              {/* <ProductResources
+              <ProductResources
                 resources={product.metadata.resources || []}
                 isEditing={isEditing}
                 onAddResource={handleAddResource}
                 onRemoveResource={handleRemoveResource}
                 onResourceChange={handleResourceChange}
-              /> */}
+              />
               
               {/* <ProductCompetitors
                 competitors={competitors}

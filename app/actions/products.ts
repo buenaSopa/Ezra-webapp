@@ -7,6 +7,7 @@ import { products, productToCompetitors, productMarketingResources } from "@/sch
 import { v4 as uuidv4 } from "uuid"
 import { getAmazonReviews } from "@/app/actions/amazon"
 import { startTrustpilotReviewScraping } from "@/app/actions/trustpilot"
+import { indexDocumentFile } from "@/lib/document-indexer"
 
 // Types for the action parameters
 type Competitor = {
@@ -438,6 +439,46 @@ export async function uploadMarketingResourceFile(
     }
     
     console.log('Resource record created successfully:', resourceData);
+    
+    // Get the product details
+    const { data: productData, error: productError } = await supabase
+      .from("products")
+      .select("name")
+      .eq("id", productId)
+      .single();
+    
+    if (productError) {
+      console.error("Error fetching product details:", productError);
+    } else {
+      // Vectorize the document
+      console.log(`Vectorizing document for product ${productId}: ${fileName}`);
+      
+      try {
+        const vectorizationResult = await indexDocumentFile(
+          buffer, 
+          fileName, 
+          {
+            resourceId,
+            productId,
+            productName: productData.name,
+            resourceType: 'document',
+            title: fileName,
+          }
+        );
+        
+        console.log(`Vectorization result:`, vectorizationResult);
+        
+        if (!vectorizationResult.success) {
+          console.error(`Warning: Failed to vectorize document: ${vectorizationResult.error}`);
+          // Don't throw, just continue - the file is still uploaded
+        } else {
+          console.log(`Document successfully vectorized with ${vectorizationResult.chunks} chunks`);
+        }
+      } catch (vectorError) {
+        console.error(`Error during vectorization:`, vectorError);
+        // Don't throw, just continue - the file is still uploaded
+      }
+    }
     
     return { success: true, publicUrl }
   } catch (error) {
