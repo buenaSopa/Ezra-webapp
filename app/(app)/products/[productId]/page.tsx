@@ -1069,7 +1069,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div>
                   <h3 className="text-sm font-medium mb-0.5"
                       style={{color: hasRunningJobs ? '#1E40AF' : '#047857'}}>
-                    {(hasRunningJobs || isRefreshingReviews) ? 'Review scraping in progress' : 'Review scraping complete'}
+                    {(hasRunningJobs || isRefreshingReviews) ? 'Review scraping in progress (10 mins)' : 'Review scraping complete'}
                   </h3>
                   <p className="text-xs text-blue-600 dark:text-blue-400">
                     {(hasRunningJobs || isRefreshingReviews) ? (
@@ -1169,15 +1169,11 @@ export default function ProductPage({ params }: ProductPageProps) {
                   <>
                     <div className="flex items-center">
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>
-                      Data collection (3-4 mins)
+                      Data collection (8 mins)
                     </div>
                     <div className="flex items-center">
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>
-                      Vectorization (1-2 mins)
-                    </div>
-                    <div className="flex items-center">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>
-                      Feel free to start a chat anytime
+                      Vectorization (2 mins)
                     </div>
                   </>
                 ) : (
