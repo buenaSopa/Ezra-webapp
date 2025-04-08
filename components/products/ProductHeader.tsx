@@ -181,12 +181,13 @@ export function ProductHeader({
               )}
               <Button 
                 onClick={onStartChat} 
-                disabled={!scrapingStatus.isReady || isStartingChat}
-                className={!scrapingStatus.isReady ? `${scrapingStatus.color} border border-current bg-transparent hover:bg-transparent` : ''}
+                disabled={isStartingChat}
+                className={!scrapingStatus.isReady ? `border border-current hover:bg-blue-50 dark:hover:bg-blue-900/20` : ''}
               >
                 {!scrapingStatus.isReady ? (
                   <>
-                    {scrapingStatus.text}
+                    <MessageSquare className="h-4 w-4 mr-2" /> Start New Chat
+                    <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-2"></div>
                   </>
                 ) : isStartingChat ? (
                   <>

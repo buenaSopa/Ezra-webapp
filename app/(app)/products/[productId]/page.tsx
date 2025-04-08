@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { 
   Card, 
   CardContent, 
@@ -8,7 +8,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, MessageSquare } from "lucide-react";
+import { AlertCircle, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/app/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -85,6 +85,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   // Track original URL and ASIN for detecting changes
   const [originalUrl, setOriginalUrl] = useState<string>('');
   const [originalAsin, setOriginalAsin] = useState<string>('');
+  const [isScrapingCardExpanded, setIsScrapingCardExpanded] = useState(false);
   
   // Helper function to check if reviews already exist for this product
   const checkExistingReviews = async (product: Product) => {
@@ -306,15 +307,73 @@ export default function ProductPage({ params }: ProductPageProps) {
     { refreshInterval: 5000 } // Refresh every 5 seconds
   );
   
+  // Fetch competitor product IDs
+  const competitorIds = competitors.map(comp => comp.competitor_product_id);
+  
+  // Use SWR to fetch competitor scraping job status and refresh automatically
+  const { data: competitorScrapingData } = useSWR(
+    ['competitor-scraping-jobs', params.productId, competitorIds.join(',')],
+    async () => {
+      if (!competitorIds.length) return { jobs: [] };
+      
+      const allJobs = [];
+      
+      // Fetch jobs for each competitor
+      for (const competitorId of competitorIds) {
+        try {
+          const result = await getScrapingJobsForProduct(competitorId);
+          if (result.success && result.jobs && result.jobs.length > 0) {
+            // Add product information to each job
+            const competitorInfo = competitors.find(c => c.competitor_product_id === competitorId);
+            const productName = competitorInfo?.competitor?.name || 'Unknown competitor';
+            
+            const enrichedJobs = result.jobs.map(job => ({
+              ...job,
+              productName,
+              isCompetitor: true,
+              competitorId
+            }));
+            
+            allJobs.push(...enrichedJobs);
+          }
+        } catch (error) {
+          console.error(`Error fetching scraping jobs for competitor ${competitorId}:`, error);
+        }
+      }
+      
+      return { jobs: allJobs };
+    },
+    { refreshInterval: 5000 } // Refresh every 5 seconds
+  );
+  
+  // Combine main product jobs with competitor jobs
+  const allScrapingJobs = useMemo(() => {
+    const mainJobs = scrapingData?.jobs || [];
+    const competitorJobs = competitorScrapingData?.jobs || [];
+    
+    return [
+      ...mainJobs.map(job => ({ 
+        ...job, 
+        productName: product?.name || 'Current product',
+        isCompetitor: false
+      })),
+      ...competitorJobs
+    ];
+  }, [scrapingData?.jobs, competitorScrapingData?.jobs, product?.name]);
+  
   // Update hasRunningJobs state when scraping data changes
   useEffect(() => {
-    // Check if there are any running jobs
-    const hasRunning = scrapingData?.jobs?.some(job => 
-      job.status === 'running' || job.status === 'indexing' || job.status === 'queued'
-    ) || false;
+    // Check if there are any running jobs in either main product or competitors
+    const hasRunning = 
+      (scrapingData?.jobs?.some(job => 
+        job.status === 'running' || job.status === 'indexing' || job.status === 'queued'
+      ) || false) ||
+      (competitorScrapingData?.jobs?.some(job => 
+        job.status === 'running' || job.status === 'indexing' || job.status === 'queued'
+      ) || false);
     
     setHasRunningJobs(hasRunning);
-  }, [scrapingData]);
+  }, [scrapingData, competitorScrapingData]);
   
   // Determine the overall scraping status
   const getScrapingStatus = () => {
@@ -349,15 +408,15 @@ export default function ProductPage({ params }: ProductPageProps) {
       
       if (highestPriorityJob.status === 'queued' || highestPriorityJob.status === 'running') {
         return {
-          text: 'Loading...',
+          text: 'Processing reviews...',
           color: 'text-blue-500',
-          isReady: false
+          isReady: true // Always allow chat to start
         };
       } else if (highestPriorityJob.status === 'indexing') {
         return {
-          text: 'Vectorizing...',
+          text: 'Vectorizing reviews...',
           color: 'text-blue-500',
-          isReady: false
+          isReady: true // Always allow chat to start
         };
       }
     }
@@ -376,7 +435,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     const failed = scrapingData.jobs.some(job => job.status === 'failed' || job.status === 'index_failed');
     if (failed) {
       return {
-        text: 'Warning',
+        text: 'Some review scraping failed',
         color: 'text-amber-500',
         isReady: true
       };
@@ -986,40 +1045,158 @@ export default function ProductPage({ params }: ProductPageProps) {
         showRefreshButton={false}
       />
 
-      {/* Scraping Status Card */}
-      {(hasRunningJobs || isRefreshingReviews) && (
-        <Card className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
-          <CardContent className="pt-6 flex items-start md:items-center gap-4">
+      {/* Scraping Status Card - Smaller, more compact collapsible */}
+      <Card className="mb-4 border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+        <CardContent className="py-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer" 
+            onClick={() => setIsScrapingCardExpanded(!isScrapingCardExpanded)}
+          >
             <div className="flex-shrink-0">
-              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="h-8 w-8 rounded-full flex items-center justify-center" 
+                  style={{backgroundColor: hasRunningJobs ? '#EFF6FF' : '#ECFDF5'}}>
+                {(hasRunningJobs || isRefreshingReviews) ? (
+                  <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <div className="h-4 w-4 text-green-500 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex-grow">
-              <h3 className="text-lg font-medium text-blue-700 dark:text-blue-300 mb-1">
-                Review scraping in progress
-              </h3>
-              <p className="text-blue-600 dark:text-blue-400 mb-2">
-                We're gathering reviews for your product. This process typically takes 3-5 minutes to complete.
-              </p>
-              <div className="flex flex-col md:flex-row gap-2 md:gap-4 text-sm text-blue-500 dark:text-blue-400">
-                <div className="flex items-center">
-                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
-                  Feel free to explore other sections
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-medium mb-0.5"
+                      style={{color: hasRunningJobs ? '#1E40AF' : '#047857'}}>
+                    {(hasRunningJobs || isRefreshingReviews) ? 'Review scraping in progress' : 'Review scraping complete'}
+                  </h3>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    {(hasRunningJobs || isRefreshingReviews) ? (
+                      <>Don't start a new chat yet - processing {allScrapingJobs.length} job{allScrapingJobs.length !== 1 ? 's' : ''}.</>
+                    ) : (
+                      <>All review scraping jobs have completed.</>
+                    )}
+                  </p>
                 </div>
-                <div className="flex items-center">
-                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
-                  You'll be notified when it's done
-                </div>
-                <div className="flex items-center">
-                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
-                  Time for a coffee break! ☕
-                </div>
+                <button 
+                  className="text-blue-500 p-1 rounded-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsScrapingCardExpanded(!isScrapingCardExpanded);
+                  }}
+                >
+                  {isScrapingCardExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+            
+          {/* Expandable content */}
+          {isScrapingCardExpanded && (
+            <div className="mt-3 border-t border-blue-200 pt-3">
+              {/* Job Status Details */}
+              {allScrapingJobs.length > 0 && (
+                <div className="border border-blue-200 rounded-md overflow-hidden mb-3">
+                  <div className="bg-blue-100 dark:bg-blue-900/50 px-3 py-1 text-blue-700 dark:text-blue-300 text-xs font-medium">
+                    {(hasRunningJobs || isRefreshingReviews) ? 'Current Scraping Jobs' : 'Previous Scraping Jobs'}
+                  </div>
+                  <div className="divide-y divide-blue-200">
+                    {allScrapingJobs.map((job, index) => (
+                      <div key={job.id || index} className="px-3 py-2 flex justify-between items-center">
+                        <div>
+                          <div className="font-medium text-xs flex items-center">
+                            {job.isCompetitor && (
+                              <span className="text-xs px-1 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 rounded mr-1">
+                                Competitor
+                              </span>
+                            )}
+                            {job.productName || 'Unknown product'}
+                          </div>
+                          <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                            <span className="rounded-full px-1 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-[10px]">
+                              {job.source || 'Unknown source'}
+                            </span>
+                            <span className="truncate max-w-[150px]">{job.source_identifier || 'Unknown identifier'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          {job.status === 'queued' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">
+                              <span className="h-1.5 w-1.5 mr-1 rounded-full bg-yellow-400"></span>
+                              Queued
+                            </span>
+                          )}
+                          {job.status === 'running' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-800">
+                              <span className="h-1.5 w-1.5 mr-1 rounded-full bg-blue-400 animate-pulse"></span>
+                              Processing
+                            </span>
+                          )}
+                          {job.status === 'indexing' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-100 text-indigo-800">
+                              <span className="h-1.5 w-1.5 mr-1 rounded-full bg-indigo-400 animate-pulse"></span>
+                              Vectorizing
+                            </span>
+                          )}
+                          {job.status === 'indexed' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-800">
+                              <span className="h-1.5 w-1.5 mr-1 rounded-full bg-green-400"></span>
+                              Complete
+                            </span>
+                          )}
+                          {job.status === 'failed' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800">
+                              <span className="h-1.5 w-1.5 mr-1 rounded-full bg-red-400"></span>
+                              Failed
+                            </span>
+                          )}
+                          {(job.status === 'completed' || !job.status) && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-800">
+                              <span className="h-1.5 w-1.5 mr-1 rounded-full bg-gray-400"></span>
+                              Processing
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex flex-wrap gap-2 text-xs text-blue-500 dark:text-blue-400">
+                {(hasRunningJobs || isRefreshingReviews) ? (
+                  <>
+                    <div className="flex items-center">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>
+                      Data collection (3-4 mins)
+                    </div>
+                    <div className="flex items-center">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>
+                      Vectorization (1-2 mins)
+                    </div>
+                    <div className="flex items-center">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>
+                      Feel free to start a chat anytime
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1"></span>
+                      Data collection complete
+                    </div>
+                    <div className="flex items-center">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1"></span>
+                      Ready for chat
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="mb-6">

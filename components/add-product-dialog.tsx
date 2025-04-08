@@ -199,9 +199,9 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         name: productName,
         url: productUrl || undefined,
         amazonAsin: productAmazonAsin || undefined,
-        competitors: competitors.filter(c => c.name && c.url).map(c => ({
+        competitors: competitors.filter(c => c.name).map(c => ({
           name: c.name,
-          url: c.url,
+          url: c.url || '',
           amazonAsin: c.amazonAsin,
         })),
         resources: [] // Empty resources array, since we're handling files directly
@@ -490,17 +490,16 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                       value={competitor.url}
                       onChange={(e) => handleCompetitorChange(index, 'url', e.target.value)}
                       placeholder="https://example.com"
-                      required
                     />
                   </div>
-                  <div className="grid gap-1">
+                      <div className="grid gap-1">
                     <label className="text-sm font-medium">Amazon ASIN</label>
-                    <Input
-                      value={competitor.amazonAsin || ''}
-                      onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
-                      placeholder="B00EXAMPLE"
-                    />
-                  </div>
+                        <Input
+                          value={competitor.amazonAsin || ''}
+                          onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
+                          placeholder="B00EXAMPLE"
+                        />
+                      </div>
                   <div className="grid gap-2">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-medium">
@@ -520,12 +519,12 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                       </Button>
                     </div>
                     
-                    <Input
+                        <Input
                       id={`competitor-file-${index}`}
                       name="file"
-                      type="file"
+                          type="file"
                       multiple
-                      onChange={(e) => handleCompetitorFileChange(index, e)}
+                          onChange={(e) => handleCompetitorFileChange(index, e)}
                       accept=".csv,.xlsx,.xls,.txt,.pdf,.doc,.docx"
                       className="hidden" // Hide the default file input
                     />
@@ -537,20 +536,20 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                           {competitor.files.length} file(s) selected
                         </div>
                         
-                        {competitor.files.map((file, fileIndex) => (
-                          <div key={fileIndex} className="flex items-center justify-between bg-muted p-2 rounded-md">
-                            <span className="text-sm truncate">{file.name}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveCompetitorFile(index, fileIndex)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            {competitor.files.map((file, fileIndex) => (
+                              <div key={fileIndex} className="flex items-center justify-between bg-muted p-2 rounded-md">
+                                <span className="text-sm truncate">{file.name}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveCompetitorFile(index, fileIndex)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
                     ) : (
                       <div className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer"
                            onClick={() => {
