@@ -466,28 +466,30 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       {/* <Separator className="my-2" /> */}
       
       {/* Additional Resources Section */}
-      {/* <div className="grid gap-4 py-4">
+      <div className="grid gap-4 py-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium">Additional Resources</h3>
+          <h3 className="text-lg font-medium">Manual Review Upload</h3>
           <Button 
             type="button" 
             variant="outline" 
             size="sm" 
             onClick={handleAddResource}
           >
-            <Plus className="h-4 w-4 mr-1" /> Add Resource
+            <Upload className="h-4 w-4 mr-1" /> Upload Reviews
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">Add any additional resources like reviews, documents, etc.</p>
+        <p className="text-sm text-muted-foreground">
+          Upload files containing reviews. Supported formats: CSV, Excel, Text files, or PDFs.
+        </p>
         
         {resources.length === 0 && (
-          <p className="text-sm text-muted-foreground italic">No additional resources added yet.</p>
+          <p className="text-sm text-muted-foreground italic">No review files uploaded yet.</p>
         )}
         
         {resources.map((resource, index) => (
           <Card key={index} className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h4 className="text-sm font-medium">Resource {index + 1}</h4>
+              <h4 className="text-sm font-medium">Review File {index + 1}</h4>
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -499,49 +501,43 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             </div>
             <div className="grid gap-3">
               <div className="grid gap-1">
-                <label className="text-sm">Resource Type</label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={resource.type}
-                  onChange={(e) => handleResourceChange(index, 'type', e.target.value as 'document' | 'other')}
-                  required
-                >
-                  <option value="document">Document</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className="grid gap-1">
-                <label className="text-sm">Title</label>
-                <Input
-                  value={resource.title}
-                  onChange={(e) => handleResourceChange(index, 'title', e.target.value)}
-                  placeholder="Resource title"
-                  required
-                />
-              </div>
-              <div className="grid gap-1">
                 <label className="text-sm">Upload File</label>
-                <Input
-                  type="file"
-                  onChange={(e) => handleResourceChange(index, 'file', e.target.files?.[0] || null)}
-                  className="flex-1"
-                  accept=".pdf,.doc,.docx,.txt,.csv"
-                />
+                <div className="flex flex-col gap-2">
+                  <Input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      handleResourceChange(index, 'file', file);
+                      if (file) {
+                        // Use file name without extension as the title
+                        const titleWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+                        handleResourceChange(index, 'title', titleWithoutExtension);
+                      }
+                    }}
+                    className="flex-1"
+                    accept=".csv,.xlsx,.xls,.txt,.pdf,.doc,.docx"
+                  />
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Supported formats:</p>
+                    <ul className="list-disc list-inside pl-2">
+                      <li>CSV/Excel: Should include columns for review text, rating, and date</li>
+                      <li>Text/PDF/Doc: Will be processed to extract review content</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-1">
-                <label className="text-sm">Or Provide URL</label>
-                <Input
-                  type="url"
-                  value={resource.url || ''}
-                  onChange={(e) => handleResourceChange(index, 'url', e.target.value)}
-                  placeholder="https://example.com/resource"
-                  disabled={!!resource.file}
-                />
-              </div>
+              {resource.file && (
+                <div className="bg-muted p-2 rounded-md">
+                  <p className="text-sm flex items-center">
+                    <Upload className="h-4 w-4 mr-2" />
+                    {resource.file.name}
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
         ))}
-      </div> */}
+      </div>
       
       <DialogFooter>
         <Button type="submit" disabled={isSubmitting}>
