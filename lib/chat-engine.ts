@@ -2,6 +2,7 @@
 import { ContextChatEngine, LLM, MetadataFilters, storageContextFromDefaults, VectorStoreIndex } from "llamaindex";
 import { getQdrantVectorStore } from "./qdrant";
 import { createClient } from "@/app/utils/supabase/server";
+import { adsCreativeTemplate } from "./prompts/prompt";
 
 /**
  * Fetches competitor product IDs for a given product
@@ -142,7 +143,7 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 
 	// Create retriever
 	const retriever = index.asRetriever({
-		similarityTopK: 20,
+		similarityTopK: 50,
 		filters: filters
 	});
 	
@@ -182,6 +183,10 @@ Influence by Robert Cialdini
 Made to Stick by Chip & Dan Heath
 Contagious by Jonah Berger
 Marketing Management by Philip Kotler
+
+if user's ask for like ads script u can use these templates, choose one of them based on either user's 
+query or your best judgement as a creative strategist expert:
+: ${adsCreativeTemplate}
 	`;
 
 	// Create and return the chat engine
