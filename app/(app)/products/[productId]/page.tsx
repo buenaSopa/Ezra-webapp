@@ -74,6 +74,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+  const [productResources, setProductResources] = useState<any[]>([]);
   const [competitors, setCompetitors] = useState<ProductCompetitor[]>([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
@@ -593,6 +594,45 @@ export default function ProductPage({ params }: ProductPageProps) {
     fetchCompetitors();
   }, [product, params.productId, supabase]);
   
+  // Add effect to fetch product resources from the product_marketing_resources table
+  useEffect(() => {
+    const fetchProductResources = async () => {
+      if (!params.productId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("product_marketing_resources")
+          .select("*")
+          .eq("product_id", params.productId)
+          .order("created_at", { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching product resources:", error);
+          return;
+        }
+        
+        // Map the database resources to the format expected by the ProductResources component
+        const formattedResources = data.map(resource => ({
+          name: resource.title,
+          url: resource.url || resource.file_path ? 
+            supabase.storage.from('marketing-resources').getPublicUrl(resource.file_path).data.publicUrl : 
+            '',
+          id: resource.id,
+          description: resource.description,
+          resourceType: resource.resource_type,
+          isFile: !!resource.file_path
+        }));
+        
+        setProductResources(formattedResources);
+        console.log("Loaded product resources:", formattedResources);
+      } catch (err) {
+        console.error("Error in fetchProductResources:", err);
+      }
+    };
+    
+    fetchProductResources();
+  }, [params.productId, supabase]);
+  
   // Product field change handlers
   const handleInputChange = (field: string, value: string) => {
     if (!product) return;
@@ -621,53 +661,92 @@ export default function ProductPage({ params }: ProductPageProps) {
   };
   
   // Resource management handlers
-  const handleAddResource = () => {
+  const handleAddResource = async () => {
     if (!product) return;
     
-    const resources = product.metadata.resources || [];
-    setProduct({
-      ...product,
-      metadata: {
-        ...product.metadata,
-        resources: [
-          ...resources,
-          { name: "New Resource", url: "" }
-        ]
+    try {
+      // Add new resource to product_marketing_resources table
+      const { data, error } = await supabase
+        .from("product_marketing_resources")
+        .insert({
+          product_id: params.productId,
+          resource_type: 'link',
+          title: "New Resource",
+          url: ""
+        })
+        .select();
+      
+      if (error) {
+        console.error("Error adding resource:", error);
+        return;
       }
-    });
+      
+      // Update the state with the new resource
+      setProductResources([
+        ...productResources, 
+        {
+          name: "New Resource",
+          url: "",
+          id: data[0].id,
+          resourceType: 'link',
+          isFile: false
+        }
+      ]);
+    } catch (err) {
+      console.error("Error in handleAddResource:", err);
+    }
   };
   
-  const handleRemoveResource = (index: number) => {
-    if (!product || !product.metadata.resources) return;
-    
-    const resources = [...product.metadata.resources];
-    resources.splice(index, 1);
-    
-    setProduct({
-      ...product,
-      metadata: {
-        ...product.metadata,
-        resources
+  const handleRemoveResource = async (index: number) => {
+    try {
+      const resourceToRemove = productResources[index];
+      
+      // Delete from database
+      const { error } = await supabase
+        .from("product_marketing_resources")
+        .delete()
+        .eq("id", resourceToRemove.id);
+      
+      if (error) {
+        console.error("Error removing resource:", error);
+        return;
       }
-    });
+      
+      // Update state
+      const updatedResources = [...productResources];
+      updatedResources.splice(index, 1);
+      setProductResources(updatedResources);
+    } catch (err) {
+      console.error("Error in handleRemoveResource:", err);
+    }
   };
   
-  const handleResourceChange = (index: number, field: string, value: string) => {
-    if (!product || !product.metadata.resources) return;
-    
-    const resources = [...product.metadata.resources];
-    resources[index] = {
-      ...resources[index],
-      [field]: value
-    };
-    
-    setProduct({
-      ...product,
-      metadata: {
-        ...product.metadata,
-        resources
+  const handleResourceChange = async (index: number, field: string, value: string) => {
+    try {
+      const resourceToUpdate = productResources[index];
+      const mappedField = field === 'name' ? 'title' : field;
+      
+      // Update in database
+      const { error } = await supabase
+        .from("product_marketing_resources")
+        .update({ [mappedField]: value })
+        .eq("id", resourceToUpdate.id);
+      
+      if (error) {
+        console.error(`Error updating resource ${field}:`, error);
+        return;
       }
-    });
+      
+      // Update state
+      const updatedResources = [...productResources];
+      updatedResources[index] = {
+        ...updatedResources[index],
+        [field]: value
+      };
+      setProductResources(updatedResources);
+    } catch (err) {
+      console.error("Error in handleResourceChange:", err);
+    }
   };
 
   // Competitor management handlers
@@ -962,7 +1041,7 @@ export default function ProductPage({ params }: ProductPageProps) {
               />
               
               <ProductResources
-                resources={product.metadata.resources || []}
+                resources={productResources}
                 isEditing={isEditing}
                 onAddResource={handleAddResource}
                 onRemoveResource={handleRemoveResource}

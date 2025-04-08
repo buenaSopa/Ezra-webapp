@@ -1,11 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Link as LinkIcon } from "lucide-react";
+import { Plus, Link as LinkIcon, FileText, Download } from "lucide-react";
 
 interface Resource {
   name: string;
   url: string;
+  id?: string;
+  description?: string;
+  resourceType?: string;
+  isFile?: boolean;
 }
 
 interface ProductResourcesProps {
@@ -43,7 +47,11 @@ export function ProductResources({
         <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
           {resources.map((resource, index) => (
             <div key={index} className={`flex items-center gap-2 ${isEditing ? 'mb-2' : ''}`}>
-              <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              {resource.isFile ? (
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+              ) : (
+                <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
               
               {isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-2 w-full">
@@ -53,12 +61,14 @@ export function ProductResources({
                     onChange={(e) => onResourceChange(index, 'name', e.target.value)}
                     placeholder="Resource name"
                   />
-                  <Input
-                    className="md:col-span-2"
-                    value={resource.url}
-                    onChange={(e) => onResourceChange(index, 'url', e.target.value)}
-                    placeholder="https://example.com"
-                  />
+                  {!resource.isFile && (
+                    <Input
+                      className="md:col-span-2"
+                      value={resource.url}
+                      onChange={(e) => onResourceChange(index, 'url', e.target.value)}
+                      placeholder="https://example.com"
+                    />
+                  )}
                   <Button 
                     type="button" 
                     variant="ghost" 
@@ -70,16 +80,28 @@ export function ProductResources({
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-col">
+                <div className="flex flex-col w-full">
                   <span className="text-sm font-medium">{resource.name}</span>
-                  <a 
-                    href={resource.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-xs text-blue-500 hover:underline"
-                  >
-                    {resource.url}
-                  </a>
+                  {resource.isFile ? (
+                    <a 
+                      href={resource.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-xs text-blue-500 hover:underline flex items-center"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download file
+                    </a>
+                  ) : (
+                    <a 
+                      href={resource.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-xs text-blue-500 hover:underline"
+                    >
+                      {resource.url}
+                    </a>
+                  )}
                 </div>
               )}
             </div>
