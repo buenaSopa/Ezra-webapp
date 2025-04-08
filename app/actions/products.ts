@@ -80,6 +80,33 @@ export async function createProduct({
     console.log('Product created successfully:', productData);
     const productId = productData.id
     
+    // Define the review check function here so it's accessible for both main product and competitors
+    // Check if reviews already exist before triggering scrapes
+    const checkExistingReviews = async (source: 'trustpilot' | 'amazon', sourceValue: string) => {
+      try {
+        // For Trustpilot, try to extract domain
+        let valueToCheck = sourceValue;
+        
+        // Check for existing reviews
+        const { count, error } = await supabase
+          .from("review_sources")
+          .select("id", { count: 'exact', head: true })
+          .eq("product_source", valueToCheck)
+          .eq("source", source)
+          .limit(1);
+        
+        if (error) {
+          console.error(`Error checking for existing ${source} reviews:`, error);
+          return false;
+        }
+        
+        return count !== null && count > 0;
+      } catch (error) {
+        console.error(`Error in checkExistingReviews for ${source}:`, error);
+        return false;
+      }
+    };
+    
     // Process competitors
     if (competitors.length > 0) {
       console.log(`Processing ${competitors.length} competitors...`);
@@ -125,6 +152,44 @@ export async function createProduct({
         } else {
           console.log(`Relationship created between product ${productId} and competitor ${competitorData.id}`);
         }
+
+        // Trigger scraping for competitor reviews
+        const competitorId = competitorData.id;
+        
+        try {
+          // Trigger Amazon scrape if competitor has an ASIN
+          if (competitor.amazonAsin && competitor.amazonAsin.trim()) {
+            const competitorAsin = competitor.amazonAsin.trim();
+            // Check if reviews already exist
+            const hasCompetitorAmazonReviews = await checkExistingReviews('amazon', competitorAsin);
+            
+            if (!hasCompetitorAmazonReviews) {
+              console.log(` -> Triggering Amazon scrape for competitor ${competitor.name} ASIN: ${competitorAsin}`);
+              // Intentionally not awaited - fire and forget
+              getAmazonReviews(competitorAsin, competitorId);
+            } else {
+              console.log(` -> Skipping Amazon scrape for competitor ${competitor.name} (reviews already exist)`);
+            }
+          }
+
+          // Trigger Trustpilot scrape if competitor has a URL
+          if (competitor.url && competitor.url.trim()) {
+            const competitorUrl = competitor.url.trim();
+            // Check if reviews already exist
+            const hasCompetitorTrustpilotReviews = await checkExistingReviews('trustpilot', competitorUrl);
+            
+            if (!hasCompetitorTrustpilotReviews) {
+              console.log(` -> Triggering Trustpilot scrape for competitor ${competitor.name} URL: ${competitorUrl}`);
+              // Intentionally not awaited - fire and forget
+              startTrustpilotReviewScraping(competitorUrl, competitorId);
+            } else {
+              console.log(` -> Skipping Trustpilot scrape for competitor ${competitor.name} (reviews already exist)`);
+            }
+          }
+        } catch (competitorScrapeError) {
+          // Log the error but don't fail the competitor creation process
+          console.error(`Error initiating background scraping tasks for competitor ${competitor.name}:`, competitorScrapeError);
+        }
       }
     }
     
@@ -156,31 +221,7 @@ export async function createProduct({
     // --- Start: Trigger asynchronous review scraping ---
     console.log(`Triggering background review scraping for product ${productId}...`);
     try {
-      // Check if reviews already exist before triggering scrapes
-      const checkExistingReviews = async (source: 'trustpilot' | 'amazon', sourceValue: string) => {
-        try {
-          // For Trustpilot, try to extract domain
-          let valueToCheck = sourceValue;
-          
-          // Check for existing reviews
-          const { count, error } = await supabase
-            .from("review_sources")
-            .select("id", { count: 'exact', head: true })
-            .eq("product_source", valueToCheck)
-            .eq("source", source)
-            .limit(1);
-          
-          if (error) {
-            console.error(`Error checking for existing ${source} reviews:`, error);
-            return false;
-          }
-          
-          return count !== null && count > 0;
-        } catch (error) {
-          console.error(`Error in checkExistingReviews for ${source}:`, error);
-          return false;
-        }
-      };
+      // Check if reviews already exist before triggering scrapes (using the function defined above)
 
       // Trigger Amazon scrape if ASIN exists
       if (amazonAsin && amazonAsin.trim()) {
