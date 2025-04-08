@@ -29,7 +29,7 @@ export function ProductResources({
 }: ProductResourcesProps) {
   return (
     <div className="space-y-3 pt-2">
-      <div className="flex items-center justify-between">
+      {/* <div className="flex items-center justify-between">
         <Label>Product Resources</Label>
         {isEditing && (
           <Button 
@@ -41,7 +41,7 @@ export function ProductResources({
             <Plus className="h-3.5 w-3.5 mr-1" /> Add Resource
           </Button>
         )}
-      </div>
+      </div> */}
       
       {resources.length ? (
         <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
@@ -69,7 +69,7 @@ export function ProductResources({
                       placeholder="https://example.com"
                     />
                   )}
-                  <Button 
+                  {/* <Button 
                     type="button" 
                     variant="ghost" 
                     size="sm" 
@@ -77,7 +77,7 @@ export function ProductResources({
                     onClick={() => onRemoveResource(index)}
                   >
                     Remove
-                  </Button>
+                  </Button> */}
                 </div>
               ) : (
                 <div className="flex flex-col w-full">
