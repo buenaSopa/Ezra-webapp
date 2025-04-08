@@ -82,26 +82,6 @@ export function ProductResources({
               ) : (
                 <div className="flex flex-col w-full">
                   <span className="text-sm font-medium">{resource.name}</span>
-                  {resource.isFile ? (
-                    <a 
-                      href={resource.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-xs text-blue-500 hover:underline flex items-center"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download file
-                    </a>
-                  ) : (
-                    <a 
-                      href={resource.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-xs text-blue-500 hover:underline"
-                    >
-                      {resource.url}
-                    </a>
-                  )}
                 </div>
               )}
             </div>

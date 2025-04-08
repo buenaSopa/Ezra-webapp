@@ -1048,7 +1048,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onResourceChange={handleResourceChange}
               />
               
-              {/* <ProductCompetitors
+              <ProductCompetitors
                 competitors={competitors}
                 availableProducts={availableProducts}
                 isEditing={isEditing}
@@ -1061,7 +1061,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onCancelCompetitorEdit={handleCancelCompetitorEdit}
                 onCompetitorChange={handleCompetitorChange}
                 onCompetitorMetadataChange={handleCompetitorMetadataChange}
-              /> */}
+              />
 
               {/* <ProductImage 
                 imageUrl={product.metadata.image_url} 
