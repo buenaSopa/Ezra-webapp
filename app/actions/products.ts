@@ -23,7 +23,7 @@ type Resource = {
 
 type CreateProductParams = {
   name: string
-  url: string
+  url?: string
   amazonAsin?: string
   competitors: Competitor[]
   resources: Resource[]

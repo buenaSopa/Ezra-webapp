@@ -147,36 +147,38 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
-    // Validate that at least URL or ASIN is provided
+    // Get form data
     const formData = new FormData(e.currentTarget)
     const productUrl = formData.get("productUrl") as string
     const productAmazonAsin = formData.get("productAmazonAsin") as string
     
-    if (!productUrl && !productAmazonAsin) {
-      toast.error("Please provide either a Product URL or an Amazon ASIN")
+    // Check if we have either URL/ASIN or manual reviews
+    const hasUrlOrAsin = productUrl || productAmazonAsin
+    const hasManualReviews = resources.some(r => r.file)
+
+    if (!hasUrlOrAsin && !hasManualReviews) {
+      toast.error("Please provide either a Product URL/Amazon ASIN or upload review files")
       return
     }
     
     setIsSubmitting(true)
     
     try {
-      
       const productName = formData.get("productName") as string
       
       // Prepare data for API call
       const productData = {
         name: productName,
-        url: productUrl,
+        url: productUrl || undefined,
         amazonAsin: productAmazonAsin || undefined,
         competitors: competitors.filter(c => c.name && c.url).map(c => ({
           name: c.name,
           url: c.url,
           amazonAsin: c.amazonAsin,
         })),
-        resources: resources.filter(r => r.title && (r.url || r.file)).map(r => ({
-          type: r.type,
+        resources: resources.filter(r => r.title && r.file).map(r => ({
+          type: 'document',
           title: r.title,
-          url: r.url
         }))
       }
 
@@ -311,7 +313,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
       
       {/* Main Product Section */}
       <div className="grid gap-4 py-4">
-        {/* <h3 className="text-lg font-medium">Product Information</h3> */}
         <div className="grid gap-2">
           <label htmlFor="productName" className="text-sm font-medium">
             Product Name
@@ -331,7 +332,7 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
             id="productUrl"
             name="productUrl"
             type="url"
-            placeholder="https://example.com/product"
+            placeholder="https://example.com"
           />
         </div>
 
@@ -346,8 +347,8 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
           />
         </div>
         
-        {/* Message explaining at least one identifier is required */}
-        <p className="text-xs text-amber-500">Please provide at least a Product URL or Amazon ASIN.</p>
+        {/* Message explaining requirements */}
+        <p className="text-xs text-amber-500">Please provide either a Product URL/Amazon ASIN or upload review files below.</p>
       </div>
       
       {/* <Separator className="my-2" /> */}
