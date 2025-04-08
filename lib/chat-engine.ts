@@ -184,7 +184,7 @@ Made to Stick by Chip & Dan Heath
 Contagious by Jonah Berger
 Marketing Management by Philip Kotler
 
-if user's ask for like ads script u can use these templates, choose one of them based on either user's 
+if user's ask for like ads script or ad concepts u can use these templates, choose one of them based on either user's 
 query or your best judgement as a creative strategist expert:
 : ${adsCreativeTemplate}
 	`;

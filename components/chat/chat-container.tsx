@@ -36,11 +36,9 @@ export function ChatContainer({
   }, [messages]);
 
   const defaultSuggestions = [
-    "How does this product compare to its competitors?",
-    "What are the most common complaints in reviews?",
-    "What features do customers like the most?",
-    "Summarize the reviews for me",
-    "What's the overall sentiment of reviews?"
+    "How does customer sentiment toward our brand compare to top competitors, and what narrative gaps can we exploit?",
+    "What recurring customer stories or pain points could be turned into compelling ad scripts or testimonials?",
+    "Based on review patterns, what are the top 5 ad concepts we can build that feel authentic, relevant, and differentiated?",
   ];
 
   return (
