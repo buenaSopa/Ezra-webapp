@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, X, Upload, Link, ChevronDown } from "lucide-react"
+import { Plus, X, Upload, Link, ChevronDown, Paperclip, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,6 +26,7 @@ import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
 import { cn } from "@/lib/utils"
 import { refreshProductList } from "./RecentProductsWrapper"
+import { Label } from "@/components/ui/label"
 
 // Define types for our form data
 type Competitor = {
@@ -33,7 +34,6 @@ type Competitor = {
   url: string;
   amazonAsin?: string;
   files: File[];
-  isAdditionalInfoOpen?: boolean;
 }
 
 type Resource = {
@@ -50,9 +50,6 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
   const [competitors, setCompetitors] = useState<Competitor[]>([])
   const [productFiles, setProductFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isAdditionalInfoOpen, setIsAdditionalInfoOpen] = useState(false)
-  const [isCompetitorsOpen, setIsCompetitorsOpen] = useState(false)
-  const [competitorCollapsibleStates, setCompetitorCollapsibleStates] = useState<boolean[]>([])
 
   const handleAddCompetitor = () => {
     if (competitors.length < 5) {
@@ -62,13 +59,11 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
         files: [],
       }
       setCompetitors([...competitors, newCompetitor])
-      setCompetitorCollapsibleStates([...competitorCollapsibleStates, false])
     }
   }
 
   const handleRemoveCompetitor = (index: number) => {
     setCompetitors(competitors.filter((_, i) => i !== index))
-    setCompetitorCollapsibleStates(competitorCollapsibleStates.filter((_, i) => i !== index))
   }
 
   const handleCompetitorChange = (index: number, field: keyof Competitor, value: string | File[]) => {
@@ -113,17 +108,20 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
   }
 
   const handleRemoveCompetitorFile = (competitorIndex: number, fileIndex: number) => {
-    const updatedCompetitors = [...competitors]
-    updatedCompetitors[competitorIndex].files = updatedCompetitors[competitorIndex].files.filter((_, i) => i !== fileIndex)
-    setCompetitors(updatedCompetitors)
-  }
+    setCompetitors(prevCompetitors => {
+      const updatedCompetitors = [...prevCompetitors];
+      if (updatedCompetitors[competitorIndex] && 
+          updatedCompetitors[competitorIndex].files && 
+          Array.isArray(updatedCompetitors[competitorIndex].files)) {
+        updatedCompetitors[competitorIndex] = {
+          ...updatedCompetitors[competitorIndex],
+          files: updatedCompetitors[competitorIndex].files!.filter((_, i) => i !== fileIndex)
+        };
+      }
+      return updatedCompetitors;
+    });
+  };
 
-  const handleCompetitorCollapsibleChange = (index: number, isOpen: boolean) => {
-    const newStates = [...competitorCollapsibleStates]
-    newStates[index] = isOpen
-    setCompetitorCollapsibleStates(newStates)
-  }
-  
   // File handling with drag and drop support
   const handleFileDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -146,6 +144,26 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
+  };
+
+  // File handling with drag and drop support for competitors
+  const handleCompetitorFileDrop = (index: number, event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!event.dataTransfer.files || event.dataTransfer.files.length === 0) {
+      return;
+    }
+    
+    const files = Array.from(event.dataTransfer.files);
+    console.log(`Competitor ${index} files dropped:`, files.map(f => f.name));
+    
+    const newCompetitors = [...competitors];
+    newCompetitors[index] = {
+      ...newCompetitors[index],
+      files: [...newCompetitors[index].files, ...files]
+    };
+    setCompetitors(newCompetitors);
   };
 
   // Helper function to convert File to base64
@@ -457,75 +475,107 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                 </div>
                 <div className="grid gap-3">
                   <div className="grid gap-1">
-                    <label className="text-sm">Name</label>
+                    <label className="text-sm font-medium">Product Name</label>
                     <Input
                       value={competitor.name}
                       onChange={(e) => handleCompetitorChange(index, 'name', e.target.value)}
-                      placeholder="Competitor name"
+                      placeholder="Enter product name"
                       required
                     />
                   </div>
                   <div className="grid gap-1">
-                    <label className="text-sm">URL</label>
+                    <label className="text-sm font-medium">Brand URL</label>
                     <Input
                       type="url"
                       value={competitor.url}
                       onChange={(e) => handleCompetitorChange(index, 'url', e.target.value)}
-                      placeholder="https://competitor-website.com"
+                      placeholder="https://example.com"
                       required
                     />
                   </div>
-                  <Collapsible 
-                    open={competitorCollapsibleStates[index]} 
-                    onOpenChange={(isOpen) => handleCompetitorCollapsibleChange(index, isOpen)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex w-full justify-between">
-                        <span>Additional Competitor Information</span>
-                        <ChevronDown className={cn(
-                          "h-4 w-4 transition-transform duration-200",
-                          competitorCollapsibleStates[index] && "transform rotate-180"
-                        )} />
+                  <div className="grid gap-1">
+                    <label className="text-sm font-medium">Amazon ASIN</label>
+                    <Input
+                      value={competitor.amazonAsin || ''}
+                      onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
+                      placeholder="B00EXAMPLE"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium">
+                        Upload Files Directly
+                      </label>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          // Trigger the hidden file input
+                          const fileInput = document.getElementById(`competitor-file-${index}`) as HTMLInputElement;
+                          if (fileInput) fileInput.click();
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-1" /> Select Files
                       </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-4 pt-4">
-                      <div className="grid gap-1">
-                        <label className="text-sm">Amazon ASIN (optional)</label>
-                        <Input
-                          value={competitor.amazonAsin || ''}
-                          onChange={(e) => handleCompetitorChange(index, 'amazonAsin', e.target.value)}
-                          placeholder="B00EXAMPLE"
-                        />
-                      </div>
-                      <div className="grid gap-1">
-                        <label className="text-sm">Additional Files</label>
-                        <Input
-                          type="file"
-                          onChange={(e) => handleCompetitorFileChange(index, e)}
-                          className="flex-1"
-                          multiple
-                          accept=".pdf,.doc,.docx,.txt,.csv"
-                        />
-                        {competitor.files.length > 0 && (
-                          <div className="grid gap-2 mt-2">
-                            {competitor.files.map((file, fileIndex) => (
-                              <div key={fileIndex} className="flex items-center justify-between bg-muted p-2 rounded-md">
-                                <span className="text-sm truncate">{file.name}</span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoveCompetitorFile(index, fileIndex)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
+                    </div>
+                    
+                    <Input
+                      id={`competitor-file-${index}`}
+                      name="file"
+                      type="file"
+                      multiple
+                      onChange={(e) => handleCompetitorFileChange(index, e)}
+                      accept=".csv,.xlsx,.xls,.txt,.pdf,.doc,.docx"
+                      className="hidden" // Hide the default file input
+                    />
+                    
+                    {competitor.files.length > 0 ? (
+                      <div className="grid gap-2 mt-2 border rounded-md p-3">
+                        <div className="text-sm font-medium text-green-600 flex items-center mb-2">
+                          <Upload className="h-4 w-4 mr-2" />
+                          {competitor.files.length} file(s) selected
+                        </div>
+                        
+                        {competitor.files.map((file, fileIndex) => (
+                          <div key={fileIndex} className="flex items-center justify-between bg-muted p-2 rounded-md">
+                            <span className="text-sm truncate">{file.name}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCompetitorFile(index, fileIndex)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
-                        )}
+                        ))}
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                    ) : (
+                      <div className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer"
+                           onClick={() => {
+                             const fileInput = document.getElementById(`competitor-file-${index}`) as HTMLInputElement;
+                             if (fileInput) fileInput.click();
+                           }}
+                           onDrop={(e) => handleCompetitorFileDrop(index, e)}
+                           onDragOver={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                           }}
+                           onDragEnter={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                           }}>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Drag and drop files here, or click to browse
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Supported formats: CSV, PDF, DOC, TXT
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))}
