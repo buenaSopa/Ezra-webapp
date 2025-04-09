@@ -143,11 +143,6 @@ export default function InsightsTestButton({ productId }: { productId: string })
       
       {result && result.success && (
         <Card className="mt-4">
-          <CardHeader className="border-b">
-            <CardTitle className="text-xl">
-              Product Insights {result.cached && <span className="text-sm text-muted-foreground">(cached)</span>}
-            </CardTitle>
-          </CardHeader>
           <CardContent className="pt-6">
             <Tabs defaultValue="customer-needs" className="w-full">
               <TabsList className="grid grid-cols-4 mb-6">
@@ -265,13 +260,13 @@ export default function InsightsTestButton({ productId }: { productId: string })
               </TabsContent>
 
               {/* Tab 3: Marketing Assets */}
-              <TabsContent value="marketing-assets" className="space-y-6">
+              <TabsContent value="marketing-assets" className="space-y-5">
                 {/* Headlines */}
                 <div>
-                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Headlines</h2>
+                  <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Headlines</h2>
                   <div className="space-y-2">
                     {result.insights.headlines.map((headline: string, index: number) => (
-                      <div key={index} className="p-3 bg-white border rounded shadow-sm font-medium">
+                      <div key={index} className="p-2 bg-white border rounded shadow-sm text-sm">
                         {headline}
                       </div>
                     ))}
@@ -280,10 +275,10 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 
                 {/* Hooks */}
                 <div>
-                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Hooks</h2>
+                  <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Hooks</h2>
                   <div className="space-y-2">
                     {result.insights.hooks.map((hook: string, index: number) => (
-                      <div key={index} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100 font-medium">
+                      <div key={index} className="p-2 bg-white border rounded shadow-sm text-sm">
                         {hook}
                       </div>
                     ))}
@@ -292,13 +287,13 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 
                 {/* Objection Responses */}
                 <div>
-                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Objection Responses</h2>
+                  <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Objection Responses</h2>
                   <div className="divide-y">
                     {result.insights.objectionResponses.map((item: any, index: number) => (
-                      <div key={index} className="py-3 border-t first:border-t-0">
-                        <h4 className="font-medium">{item.objection}</h4>
-                        <div className="mt-2 pl-4">
-                          <div className="text-sm bg-green-50 p-2 rounded border border-green-100">
+                      <div key={index} className="py-2 border-t first:border-t-0">
+                        <h4 className="text-sm font-medium">{item.objection}</h4>
+                        <div className="mt-1 pl-3">
+                          <div className="text-sm bg-white border rounded shadow-sm p-2">
                             {item.response}
                           </div>
                         </div>
@@ -309,8 +304,14 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 
                 {/* Trigger Events */}
                 <div>
-                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Trigger Events</h2>
-                  {renderSimpleList(result.insights.triggerEvents)}
+                  <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Trigger Events</h2>
+                  <div className="space-y-2">
+                    {result.insights.triggerEvents.map((item: string, index: number) => (
+                      <div key={index} className="p-2 bg-white border rounded shadow-sm text-sm">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </TabsContent>
 
