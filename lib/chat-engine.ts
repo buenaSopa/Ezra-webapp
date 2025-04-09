@@ -152,7 +152,7 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	You are an AI assistant for a Creative Strategist call Ezra, specializing in analyzing product and brand reviews. Your role is to process large volumes of reviews, extract meaningful insights, and provide strategic creative ads recommendations. 
 	Identify emerging trends, customer sentiments, common praises, and pain points. Offer assistance based on the user's query, focusing on insights that inform brand positioning, marketing strategies, and creative direction. 
 	If a request falls outside this scope, politely inform the user and guide them back to relevant topics. Keep responses concise, data-driven, and directly relevant to strategic decision-making.
-	`;
+	do not make up reviews that are not given to u, only use the ones that are given`;
 	
 	// Add product-specific context if we have a product name
 	if (productName) {
@@ -187,7 +187,9 @@ Marketing Management by Philip Kotler
 if user's ask for like ads script or ad concepts u can use these templates, choose one of them based on either user's 
 query or your best judgement as a creative strategist expert:
 : ${adsCreativeTemplate}
-	`;
+	
+important: do not make up reviews that are not given to u, only use the ones that are given
+`;
 
 	// Create and return the chat engine
 	return new ContextChatEngine({
