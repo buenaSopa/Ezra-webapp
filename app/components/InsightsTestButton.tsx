@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw, History } from "lucide-react";
 import { generateProductInsights, getProductInsights } from "@/app/actions/insights-actions";
 
 export default function InsightsTestButton({ productId }: { productId: string }) {
@@ -14,14 +14,14 @@ export default function InsightsTestButton({ productId }: { productId: string })
   const [error, setError] = useState<string | null>(null);
   const [timeTaken, setTimeTaken] = useState<number | null>(null);
 
-  const handleGenerateInsights = async () => {
+  const handleGenerateInsights = async (useCache: boolean = false) => {
     setIsLoading(true);
     setError(null);
     setTimeTaken(null);
     
     try {
       const startTime = performance.now();
-      const response = await generateProductInsights(productId);
+      const response = await generateProductInsights(productId, useCache);
       const endTime = performance.now();
       setTimeTaken(endTime - startTime);
       
@@ -63,9 +63,9 @@ export default function InsightsTestButton({ productId }: { productId: string })
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button 
-          onClick={handleGenerateInsights} 
+          onClick={() => handleGenerateInsights(false)} 
           disabled={isLoading}
         >
           {isLoading ? (
@@ -80,7 +80,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
         
         <Button 
           onClick={handleFetchInsights} 
-          variant="outline" 
+          variant="secondary" 
           disabled={isLoading}
         >
           Fetch Latest Insights

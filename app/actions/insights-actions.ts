@@ -53,9 +53,11 @@ const insightsSchema = z.object({
 
 /**
  * Generates marketing insights for a product using AI SDK
+ * @param productId The ID of the product to generate insights for
+ * @param useCache If true, use cached insights when available (default: false - always generate new)
  */
-export async function generateProductInsights(productId: string) {
-  console.log(`Generating insights for product: ${productId}`);
+export async function generateProductInsights(productId: string, useCache: boolean = false) {
+  console.log(`Generating insights for product: ${productId}, useCache: ${useCache}`);
   
   try {
     const supabase = createClient();
@@ -71,8 +73,8 @@ export async function generateProductInsights(productId: string) {
       throw new Error(`Product not found: ${productError?.message || "Unknown error"}`);
     }
     
-    // Check if we already have recent insights in the product metadata
-    if (product.metadata?.insights && product.metadata?.insights_generated_at) {
+    // Check if we should use cached insights when available
+    if (useCache && product.metadata?.insights && product.metadata?.insights_generated_at) {
       const lastGenerated = new Date(product.metadata.insights_generated_at);
       const now = new Date();
       const hoursSinceGeneration = (now.getTime() - lastGenerated.getTime()) / (1000 * 60 * 60);
