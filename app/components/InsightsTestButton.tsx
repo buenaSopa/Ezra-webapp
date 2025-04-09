@@ -102,7 +102,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
       <CardHeader className="border-b">
         <div className="flex justify-between items-center">
           <CardTitle className="text-xl">
-            AI Marketing Insights Generator
+            AI Marketing Insights
           </CardTitle>
           <Button 
             onClick={handleGenerateInsights} 
@@ -147,11 +147,11 @@ export default function InsightsTestButton({ productId }: { productId: string })
         <CardContent className="p-0">
           <Tabs defaultValue="customer-needs" className="w-full">
             <div className="border-b px-6 py-2">
-              <TabsList className="grid grid-cols-4">
+              <TabsList className="grid grid-cols-3">
                 <TabsTrigger value="customer-needs" className="text-sm">Customer Needs</TabsTrigger>
                 <TabsTrigger value="customer-personas" className="text-sm">Customer Personas</TabsTrigger>
                 <TabsTrigger value="marketing-assets" className="text-sm">Marketing Assets</TabsTrigger>
-                <TabsTrigger value="competitive-edge" className="text-sm">Competitive Edge</TabsTrigger>
+                {/* <TabsTrigger value="competitive-edge" className="text-sm">Competitive Edge</TabsTrigger> */}
               </TabsList>
             </div>
             
