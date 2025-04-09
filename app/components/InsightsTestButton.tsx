@@ -113,19 +113,16 @@ export default function InsightsTestButton({ productId }: { productId: string })
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
+                Generating... (1 minute)
               </>
             ) : (
               <>
                 <RefreshCw className="h-4 w-4" />
-                Generate New Insights
+                Generate Insights (1 minute)
               </>
             )}
           </Button>
         </div>
-        <p className="text-muted-foreground text-sm mt-2">
-          Generate comprehensive marketing insights based on customer reviews. This tool analyzes customer feedback to identify key benefits, pain points, objections, and more to help optimize your marketing strategy.
-        </p>
         {timeTaken !== null && (
           <div className="text-xs text-muted-foreground mt-1">
             Operation completed in {(timeTaken / 1000).toFixed(2)} seconds
