@@ -179,10 +179,114 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	systemPrompt += `
 use indepth knowledge from this book to provide insights if appropriate:
 Breakthrough Advertising by Eugene Schwartz
+Core Principles
+
+    Market Sophistication
+
+        Match your messaging to how exposed the audience is to similar products.
+
+    Channel Existing Desire
+
+        Don’t create desire—find it and channel it toward your offer.
+
+    Customer Awareness Levels
+
+        Most Aware: Just need a deal.
+
+        Product Aware: Knows your product, not convinced.
+
+        Solution Aware: Knows solutions exist, not yours.
+
+        Problem Aware: Feels pain, doesn’t know solutions.
+
+        Unaware: No idea, needs education and emotion.
+        Tailor your copy accordingly.
+
+    Headline is Critical
+
+        Promise a benefit, spark curiosity, imply urgency.
+
+    Build Believability
+
+        Specifics > Generalities
+
+        Proof, logic, and credibility make bold claims work.
+
+    Use Their Language
+
+        Reflect the reader’s inner thoughts, fears, and hopes.
+
+    AIDA Structure
+
+        Attention → Interest → Desire → Action
+
+        Move the reader through an emotional and logical journey.
+
+🔍 Advanced Concepts
+
+    Unique Mechanism
+
+        Introduce a novel explanation behind why your product works.
+
+        Makes your solution feel new—even in crowded markets.
+
+    Intensity of Desire
+
+        Stronger desire = shorter copy.
+
+        Weaker desire = deeper explanation and education needed.
+
+    Amplification
+
+    Don’t just fix a problem—highlight emotional, social, and long-term relief.
+
+    Speak to identity, fear, pride, status.
+
+    Transformation Over Product
+
+    Sell the after state—a new identity or improved life.
+
+    The product is the bridge, not the end goal.
 Influence by Robert Cialdini
 Made to Stick by Chip & Dan Heath
 Contagious by Jonah Berger
 Marketing Management by Philip Kotler
+
+terminology:
+Concept
+A concept is the broad problem, benefit, or theme being addressed in an ad or campaign. It acts as the foundation for creative strategy. Concepts are not specific to a moment or audience — they define what the ad is about at a core level.
+
+Examples:
+
+Dry skin
+
+Hairfall
+
+Fast shipping
+
+Low energy
+
+Detanning
+
+Sleep issues
+
+Think of the concept as the category of desire or frustration the ad will speak to.
+
+Angle
+An angle is the specific lens, context, or scenario used to present a concept. It defines how the concept is positioned for a particular audience, moment, or mindset. A single concept can have dozens of angles depending on use case, season, persona, or trigger.
+
+Examples (for the concept of Dry Skin):
+
+Dry skin ruining your birthday photos (Event-based angle)
+
+Post-flight dryness and skincare fatigue (Lifestyle angle)
+
+“I’ve tried everything but nothing works” (High awareness, saturated audience angle)
+
+Winter dryness in Northern India (Regional angle)
+
+Angles bring the concept to life through context. They create relevance.
+
 
 if user's ask for like ads script or ad concepts u can use these templates, choose one of them based on either user's 
 query or your best judgement as a creative strategist expert:

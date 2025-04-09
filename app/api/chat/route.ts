@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Initialize LLM with gpt-4o-mini
     const llm = new OpenAI({
       model: "gpt-4o-mini",
-      temperature: 0.2,
+      temperature: 0,
     });
     
     // Create chat engine
