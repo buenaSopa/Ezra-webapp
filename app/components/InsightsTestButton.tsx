@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, RefreshCw, History } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { generateProductInsights, getProductInsights } from "@/app/actions/insights-actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InsightsTestButton({ productId }: { productId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const [selectedTab, setSelectedTab] = useState("benefits");
   const [error, setError] = useState<string | null>(null);
   const [timeTaken, setTimeTaken] = useState<number | null>(null);
 
@@ -61,6 +60,44 @@ export default function InsightsTestButton({ productId }: { productId: string })
     }
   };
 
+  // Function to render formatted quotes for benefits, pain points, etc.
+  const renderQuotesList = (items: any[], keyField: string, examplesField: string = 'examples') => {
+    return items.map((item, index) => (
+      <div key={index} className="py-3 border-t first:border-t-0">
+        <div className="flex items-start gap-2">
+          {item.frequency && (
+            <div className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs mt-1">
+              {item.frequency}
+            </div>
+          )}
+          <h4 className="font-medium">{item[keyField]}</h4>
+        </div>
+        {item[examplesField] && item[examplesField].length > 0 && (
+          <div className="mt-2 pl-4 space-y-2">
+            {item[examplesField].map((example: string, i: number) => (
+              <div key={i} className="text-sm bg-slate-50 p-2 rounded border border-slate-100 italic">
+                "{example}"
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ));
+  };
+
+  // Function to render simple list items
+  const renderSimpleList = (items: string[]) => {
+    return (
+      <div className="space-y-2 mt-2">
+        {items.map((item, index) => (
+          <div key={index} className="p-2 bg-slate-50 rounded border">
+            {item}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
@@ -108,145 +145,160 @@ export default function InsightsTestButton({ productId }: { productId: string })
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="mb-4 flex-wrap">
-                <TabsTrigger value="benefits">Benefits</TabsTrigger>
-                <TabsTrigger value="painPoints">Pain Points</TabsTrigger>
-                <TabsTrigger value="features">Valued Features</TabsTrigger>
-                <TabsTrigger value="objections">Objections</TabsTrigger>
-                <TabsTrigger value="failed">Failed Solutions</TabsTrigger>
-                <TabsTrigger value="emotional">Emotional Triggers</TabsTrigger>
-                <TabsTrigger value="personas">Personas</TabsTrigger>
-                <TabsTrigger value="headlines">Headlines</TabsTrigger>
-                <TabsTrigger value="positioning">Positioning</TabsTrigger>
-                <TabsTrigger value="triggers">Trigger Events</TabsTrigger>
-                <TabsTrigger value="responses">Objection Responses</TabsTrigger>
-                <TabsTrigger value="hooks">Hooks</TabsTrigger>
+            <Tabs defaultValue="customer-needs" className="w-full">
+              <TabsList className="grid grid-cols-4 mb-4">
+                <TabsTrigger value="customer-needs">Customer Needs</TabsTrigger>
+                <TabsTrigger value="customer-personas">Customer Personas</TabsTrigger>
+                <TabsTrigger value="marketing-assets">Marketing Assets</TabsTrigger>
+                <TabsTrigger value="competitive-edge">Competitive Edge</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="benefits" className="space-y-4">
-                <h3 className="text-lg font-medium">Benefits Ranked by Frequency</h3>
-                <div className="divide-y">
-                  {result.insights.benefits.map((item: any, index: number) => (
-                    <div key={index} className="py-3">
-                      <div className="flex items-start gap-2">
-                        <div className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs">
-                          {item.frequency}
+              {/* Tab 1: Customer Needs & Pain Points */}
+              <TabsContent value="customer-needs" className="space-y-6">
+                {/* Benefits */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Benefits Ranked by Frequency</h3>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.benefits, 'benefit')}
+                  </div>
+                </div>
+
+                {/* Pain Points */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Pain Points</h3>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.painPoints, 'painPoint')}
+                  </div>
+                </div>
+
+                {/* Valued Features */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Valued Features</h3>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.valuedFeatures, 'feature')}
+                  </div>
+                </div>
+                
+                {/* Emotional Triggers */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Emotional Triggers</h3>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.emotionalTriggers, 'trigger')}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Tab 2: Customer Personas */}
+              <TabsContent value="customer-personas" className="space-y-4">
+                {result.insights.customerPersonas.map((persona: any, index: number) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <h3 className="text-md font-bold mb-1">{persona.name}</h3>
+                    <p className="text-sm mb-3">{persona.description}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Needs:</h4>
+                        <ul className="list-disc pl-5 text-sm space-y-1">
+                          {persona.needs.map((need: string, i: number) => (
+                            <li key={i}>{need}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Pain Points:</h4>
+                        <ul className="list-disc pl-5 text-sm space-y-1">
+                          {persona.painPoints.map((pain: string, i: number) => (
+                            <li key={i}>{pain}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </TabsContent>
+
+              {/* Tab 3: Marketing Assets */}
+              <TabsContent value="marketing-assets" className="space-y-6">
+                {/* Headlines */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Headlines</h3>
+                  <div className="space-y-2">
+                    {result.insights.headlines.map((headline: string, index: number) => (
+                      <div key={index} className="p-3 bg-white border rounded shadow-sm font-medium">
+                        {headline}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Hooks */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Hooks</h3>
+                  <div className="space-y-2">
+                    {result.insights.hooks.map((hook: string, index: number) => (
+                      <div key={index} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100 font-medium">
+                        {hook}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Objection Responses */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Objection Responses</h3>
+                  <div className="divide-y">
+                    {result.insights.objectionResponses.map((item: any, index: number) => (
+                      <div key={index} className="py-3 border-t first:border-t-0">
+                        <h4 className="font-medium">{item.objection}</h4>
+                        <div className="mt-2 pl-4">
+                          <div className="text-sm bg-green-50 p-2 rounded border border-green-100">
+                            {item.response}
+                          </div>
                         </div>
-                        <h4 className="font-medium">{item.benefit}</h4>
                       </div>
-                      <div className="mt-2 pl-7 space-y-2">
-                        {item.examples.map((example: string, i: number) => (
-                          <div key={i} className="text-sm bg-slate-50 p-2 rounded border border-slate-100 italic">
-                            "{example}"
-                          </div>
-                        ))}
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Trigger Events */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Trigger Events</h3>
+                  {renderSimpleList(result.insights.triggerEvents)}
+                </div>
+              </TabsContent>
+
+              {/* Tab 4: Competitive Edge */}
+              <TabsContent value="competitive-edge" className="space-y-6">
+                {/* Prior Objections */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Prior Objections</h3>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.priorObjections, 'objection')}
+                  </div>
+                </div>
+
+                {/* Failed Solutions */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Failed Solutions</h3>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.failedSolutions, 'solution')}
+                  </div>
+                </div>
+                
+                {/* Competitive Positioning */}
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Competitive Positioning</h3>
+                  <div className="divide-y">
+                    {result.insights.competitivePositioning.map((item: any, index: number) => (
+                      <div key={index} className="py-3 border-t first:border-t-0">
+                        <h4 className="font-medium">{item.angle}</h4>
+                        <div className="mt-2 pl-4 text-sm">
+                          {item.explanation}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="painPoints" className="space-y-4">
-                <h3 className="text-lg font-medium">Pain Points Customers Had Before</h3>
-                <div className="divide-y">
-                  {result.insights.painPoints.map((item: any, index: number) => (
-                    <div key={index} className="py-3">
-                      <h4 className="font-medium">{item.painPoint}</h4>
-                      <div className="mt-2 space-y-2">
-                        {item.examples.map((example: string, i: number) => (
-                          <div key={i} className="text-sm bg-slate-50 p-2 rounded border border-slate-100 italic">
-                            "{example}"
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              {/* Remaining tab content components would follow the same pattern */}
-              {/* For brevity, I'm only including the first two tabs in detail */}
-              
-              <TabsContent value="features">
-                <h3 className="text-lg font-medium">Features They Value Most</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.valuedFeatures, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="objections">
-                <h3 className="text-lg font-medium">Prior Objections They Overcame</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.priorObjections, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="failed">
-                <h3 className="text-lg font-medium">Failed Solutions They Tried First</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.failedSolutions, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="emotional">
-                <h3 className="text-lg font-medium">Emotional Triggers Driving Purchases</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.emotionalTriggers, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="personas">
-                <h3 className="text-lg font-medium">Customer Personas</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.customerPersonas, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="headlines">
-                <h3 className="text-lg font-medium">Ready-to-Use Static Headlines</h3>
-                <div className="space-y-2">
-                  {result.insights.headlines.map((headline: string, index: number) => (
-                    <div key={index} className="p-3 bg-white border rounded shadow-sm font-medium">
-                      {headline}
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="positioning">
-                <h3 className="text-lg font-medium">Competitive Positioning Angles</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.competitivePositioning, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="triggers">
-                <h3 className="text-lg font-medium">Specific Trigger Events</h3>
-                <div className="space-y-2 mt-4">
-                  {result.insights.triggerEvents.map((event: string, index: number) => (
-                    <div key={index} className="p-2 bg-slate-50 rounded border">
-                      {event}
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="responses">
-                <h3 className="text-lg font-medium">Responses to Common Objections</h3>
-                <pre className="text-xs overflow-auto p-4 bg-slate-50 rounded">
-                  {JSON.stringify(result.insights.objectionResponses, null, 2)}
-                </pre>
-              </TabsContent>
-              
-              <TabsContent value="hooks">
-                <h3 className="text-lg font-medium">One-Liners for Hooks</h3>
-                <div className="space-y-2 mt-4">
-                  {result.insights.hooks.map((hook: string, index: number) => (
-                    <div key={index} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100 font-medium">
-                      {hook}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
