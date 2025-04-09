@@ -12,6 +12,10 @@ export default function InsightsTestButton({ productId }: { productId: string })
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [timeTaken, setTimeTaken] = useState<number | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState({
+    'customer-needs': 'benefits',
+    'competitive-edge': 'prior-objections'
+  });
 
   const handleGenerateInsights = async (useCache: boolean = false) => {
     setIsLoading(true);
@@ -139,57 +143,99 @@ export default function InsightsTestButton({ productId }: { productId: string })
       
       {result && result.success && (
         <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="flex justify-between">
-              <span>Product Insights {result.cached && <span className="text-sm text-muted-foreground">(cached)</span>}</span>
+          <CardHeader className="border-b">
+            <CardTitle className="text-xl">
+              Product Insights {result.cached && <span className="text-sm text-muted-foreground">(cached)</span>}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Tabs defaultValue="customer-needs" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-4">
-                <TabsTrigger value="customer-needs">Customer Needs</TabsTrigger>
-                <TabsTrigger value="customer-personas">Customer Personas</TabsTrigger>
-                <TabsTrigger value="marketing-assets">Marketing Assets</TabsTrigger>
-                <TabsTrigger value="competitive-edge">Competitive Edge</TabsTrigger>
+              <TabsList className="grid grid-cols-4 mb-6">
+                <TabsTrigger value="customer-needs" className="">Customer Needs</TabsTrigger>
+                <TabsTrigger value="customer-personas" className="">Customer Personas</TabsTrigger>
+                <TabsTrigger value="marketing-assets" className="">Marketing Assets</TabsTrigger>
+                <TabsTrigger value="competitive-edge" className="">Competitive Edge</TabsTrigger>
               </TabsList>
               
               {/* Tab 1: Customer Needs & Pain Points */}
-              <TabsContent value="customer-needs" className="space-y-6">
-                {/* Benefits */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Benefits Ranked by Frequency</h3>
-                  <div className="divide-y">
-                    {renderQuotesList(result.insights.benefits, 'benefit')}
+              <TabsContent value="customer-needs">
+                <div className="p-3 rounded-lg">
+                  <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
+                    <Button 
+                      variant={activeSubTab['customer-needs'] === 'benefits' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'benefits'})}
+                    >
+                      Benefits
+                    </Button>
+                    <Button 
+                      variant={activeSubTab['customer-needs'] === 'pain-points' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'pain-points'})}
+                    >
+                      Pain Points
+                    </Button>
+                    <Button 
+                      variant={activeSubTab['customer-needs'] === 'valued-features' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'valued-features'})}
+                    >
+                      Valued Features
+                    </Button>
+                    <Button 
+                      variant={activeSubTab['customer-needs'] === 'emotional-triggers' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'emotional-triggers'})}
+                    >
+                      Emotional Triggers
+                    </Button>
                   </div>
                 </div>
+
+                {/* Benefits */}
+                {activeSubTab['customer-needs'] === 'benefits' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Benefits Ranked by Frequency</h2>
+                    <div className="divide-y">
+                      {renderQuotesList(result.insights.benefits, 'benefit')}
+                    </div>
+                  </div>
+                )}
 
                 {/* Pain Points */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Pain Points</h3>
-                  <div className="divide-y">
-                    {renderQuotesList(result.insights.painPoints, 'painPoint')}
+                {activeSubTab['customer-needs'] === 'pain-points' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Pain Points</h2>
+                    <div className="divide-y">
+                      {renderQuotesList(result.insights.painPoints, 'painPoint')}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Valued Features */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Valued Features</h3>
-                  <div className="divide-y">
-                    {renderQuotesList(result.insights.valuedFeatures, 'feature')}
+                {activeSubTab['customer-needs'] === 'valued-features' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Valued Features</h2>
+                    <div className="divide-y">
+                      {renderQuotesList(result.insights.valuedFeatures, 'feature')}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Emotional Triggers */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Emotional Triggers</h3>
-                  <div className="divide-y">
-                    {renderQuotesList(result.insights.emotionalTriggers, 'trigger')}
+                {activeSubTab['customer-needs'] === 'emotional-triggers' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Emotional Triggers</h2>
+                    <div className="divide-y">
+                      {renderQuotesList(result.insights.emotionalTriggers, 'trigger')}
+                    </div>
                   </div>
-                </div>
+                )}
               </TabsContent>
 
               {/* Tab 2: Customer Personas */}
               <TabsContent value="customer-personas" className="space-y-4">
+                <h2 className="text-xl font-bold mb-4 pb-2 border-b">Customer Personas</h2>
                 {result.insights.customerPersonas.map((persona: any, index: number) => (
                   <div key={index} className="border rounded-lg p-4">
                     <h3 className="text-md font-bold mb-1">{persona.name}</h3>
@@ -222,7 +268,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
               <TabsContent value="marketing-assets" className="space-y-6">
                 {/* Headlines */}
                 <div>
-                  <h3 className="text-md font-semibold mb-2">Headlines</h3>
+                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Headlines</h2>
                   <div className="space-y-2">
                     {result.insights.headlines.map((headline: string, index: number) => (
                       <div key={index} className="p-3 bg-white border rounded shadow-sm font-medium">
@@ -234,7 +280,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 
                 {/* Hooks */}
                 <div>
-                  <h3 className="text-md font-semibold mb-2">Hooks</h3>
+                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Hooks</h2>
                   <div className="space-y-2">
                     {result.insights.hooks.map((hook: string, index: number) => (
                       <div key={index} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100 font-medium">
@@ -246,7 +292,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 
                 {/* Objection Responses */}
                 <div>
-                  <h3 className="text-md font-semibold mb-2">Objection Responses</h3>
+                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Objection Responses</h2>
                   <div className="divide-y">
                     {result.insights.objectionResponses.map((item: any, index: number) => (
                       <div key={index} className="py-3 border-t first:border-t-0">
@@ -263,43 +309,75 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 
                 {/* Trigger Events */}
                 <div>
-                  <h3 className="text-md font-semibold mb-2">Trigger Events</h3>
+                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Trigger Events</h2>
                   {renderSimpleList(result.insights.triggerEvents)}
                 </div>
               </TabsContent>
 
               {/* Tab 4: Competitive Edge */}
-              <TabsContent value="competitive-edge" className="space-y-6">
-                {/* Prior Objections */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Prior Objections</h3>
-                  <div className="divide-y">
-                    {renderQuotesList(result.insights.priorObjections, 'objection')}
+              <TabsContent value="competitive-edge">
+                <div className="bg-slate-50 p-3 rounded-lg mb-6">
+                  <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
+                    <Button 
+                      variant={activeSubTab['competitive-edge'] === 'prior-objections' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'competitive-edge': 'prior-objections'})}
+                    >
+                      Prior Objections
+                    </Button>
+                    <Button 
+                      variant={activeSubTab['competitive-edge'] === 'failed-solutions' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'competitive-edge': 'failed-solutions'})}
+                    >
+                      Failed Solutions
+                    </Button>
+                    <Button 
+                      variant={activeSubTab['competitive-edge'] === 'positioning' ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setActiveSubTab({...activeSubTab, 'competitive-edge': 'positioning'})}
+                    >
+                      Competitive Positioning
+                    </Button>
                   </div>
                 </div>
 
-                {/* Failed Solutions */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Failed Solutions</h3>
-                  <div className="divide-y">
-                    {renderQuotesList(result.insights.failedSolutions, 'solution')}
+                {/* Prior Objections */}
+                {activeSubTab['competitive-edge'] === 'prior-objections' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Prior Objections</h2>
+                    <div className="divide-y">
+                      {renderQuotesList(result.insights.priorObjections, 'objection')}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Failed Solutions */}
+                {activeSubTab['competitive-edge'] === 'failed-solutions' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Failed Solutions</h2>
+                    <div className="divide-y">
+                      {renderQuotesList(result.insights.failedSolutions, 'solution')}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Competitive Positioning */}
-                <div>
-                  <h3 className="text-md font-semibold mb-2">Competitive Positioning</h3>
-                  <div className="divide-y">
-                    {result.insights.competitivePositioning.map((item: any, index: number) => (
-                      <div key={index} className="py-3 border-t first:border-t-0">
-                        <h4 className="font-medium">{item.angle}</h4>
-                        <div className="mt-2 pl-4 text-sm">
-                          {item.explanation}
+                {activeSubTab['competitive-edge'] === 'positioning' && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4 pb-2 border-b">Competitive Positioning</h2>
+                    <div className="divide-y">
+                      {result.insights.competitivePositioning.map((item: any, index: number) => (
+                        <div key={index} className="py-3 border-t first:border-t-0">
+                          <h4 className="font-medium">{item.angle}</h4>
+                          <div className="mt-2 pl-4 text-sm">
+                            {item.explanation}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
