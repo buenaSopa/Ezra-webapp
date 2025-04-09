@@ -1,61 +1,58 @@
 "use server";
 
-import { OpenAI } from "@llamaindex/openai";
-import { Settings, VectorStoreIndex, MetadataFilters } from "llamaindex";
 import { createClient } from "@/app/utils/supabase/server";
-import { getQdrantVectorStore } from "@/lib/qdrant";
 import { z } from "zod";
+import { generateObject } from "ai";
+import { openai } from "@ai-sdk/openai";
 
 // Define schema for the insights result
 const insightsSchema = z.object({
   benefits: z.array(z.object({
-    benefit: z.string(),
-    frequency: z.number(),
-    examples: z.array(z.string())
+    benefit: z.string().describe("A clear benefit that customers get from the product"),
+    frequency: z.number().describe("Number indicating how frequently this benefit was mentioned"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this benefit"))
   })),
   painPoints: z.array(z.object({
-    painPoint: z.string(),
-    examples: z.array(z.string())
+    painPoint: z.string().describe("A pain point customers had before using the product"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this pain point"))
   })),
   valuedFeatures: z.array(z.object({
-    feature: z.string(),
-    examples: z.array(z.string())
+    feature: z.string().describe("A feature of the product that customers value"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this feature"))
   })),
   priorObjections: z.array(z.object({
-    objection: z.string(),
-    examples: z.array(z.string())
+    objection: z.string().describe("An objection customers had before purchasing"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this objection"))
   })),
   failedSolutions: z.array(z.object({
-    solution: z.string(),
-    examples: z.array(z.string())
+    solution: z.string().describe("A solution customers tried before that failed"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this failed solution"))
   })),
   emotionalTriggers: z.array(z.object({
-    trigger: z.string(),
-    examples: z.array(z.string())
+    trigger: z.string().describe("An emotional trigger that drove purchase decisions"),
+    examples: z.array(z.string().describe("Direct quotes from reviews showing this emotional trigger"))
   })),
   customerPersonas: z.array(z.object({
-    name: z.string(),
-    description: z.string(),
-    needs: z.array(z.string()),
-    painPoints: z.array(z.string())
+    name: z.string().describe("A descriptive name for this customer persona"),
+    description: z.string().describe("Brief description of this customer persona"),
+    needs: z.array(z.string().describe("Specific needs of this customer persona")),
+    painPoints: z.array(z.string().describe("Specific pain points of this customer persona"))
   })),
-  headlines: z.array(z.string()),
+  headlines: z.array(z.string().describe("Ready-to-use marketing headline")),
   competitivePositioning: z.array(z.object({
-    angle: z.string(),
-    explanation: z.string()
+    angle: z.string().describe("A competitive positioning angle"),
+    explanation: z.string().describe("Explanation of why this positioning would be effective")
   })),
-  triggerEvents: z.array(z.string()),
+  triggerEvents: z.array(z.string().describe("Events that trigger the need for this product")),
   objectionResponses: z.array(z.object({
-    objection: z.string(),
-    response: z.string()
+    objection: z.string().describe("A common objection to purchasing"),
+    response: z.string().describe("Effective response to overcome this objection")
   })),
-  hooks: z.array(z.string())
+  hooks: z.array(z.string().describe("One-liner hook for marketing copy"))
 });
 
-type ProductInsights = z.infer<typeof insightsSchema>;
-
 /**
- * Generates marketing insights for a product using LlamaIndex and OpenAI
+ * Generates marketing insights for a product using AI SDK
  */
 export async function generateProductInsights(productId: string) {
   console.log(`Generating insights for product: ${productId}`);
@@ -91,139 +88,214 @@ export async function generateProductInsights(productId: string) {
       }
     }
     
-    // Configure OpenAI with JSON response format
-    const llm = new OpenAI({
-      model: "gpt-4o-mini",
-      temperature: 0.2,
-      apiKey: process.env.OPENAI_API_KEY,
-      // @ts-ignore - Ignoring type error as the library types might be outdated
-      responseFormat: insightsSchema
-    });
+    // Get product metadata for URL and ASIN matching
+    const productUrl = product.metadata?.url;
+    const amazonAsin = product.metadata?.amazon_asin;
     
-    // Store original LLM settings to restore later
-    const originalLLM = Settings.llm;
+    // Collect all reviews from different sources
+    // Define a type for the reviews based on the review_sources table structure
+    type ReviewSource = {
+      id: string;
+      product_source: string;
+      source: string;
+      source_id: string;
+      review_text: string;
+      review_title?: string;
+      rating: number;
+      review_date?: string;
+      reviewer_name?: string;
+      verified?: boolean;
+      source_data?: any;
+      created_at?: string;
+    };
     
-    try {
-      // Temporarily set our LLM for this operation
-      Settings.llm = llm;
-      
-      // Get the existing vector store that contains already indexed reviews
-      console.log("Connecting to vector store...");
-      const qdrantVectorStore = getQdrantVectorStore();
-      
-      // Create index from the vector store
-      const index = await VectorStoreIndex.fromVectorStore(qdrantVectorStore);
-      
-      // Create a filter for just this product's reviews
-      const filters: MetadataFilters = {
-        filters: [{
-          key: "productId",
-          value: productId,
-          operator: "=="
-        }]
-      };
-      
-      // Create retriever with filters
-      const retriever = index.asRetriever({
-        similarityTopK: 50, // Retrieve more nodes for better analysis
-        filters: filters
-      });
-      
-      // Create query engine
-      console.log("Creating query engine...");
-      const queryEngine = index.asQueryEngine({
-        retriever: retriever
-      });
-      
-      // Define the prompt for generating insights
-      const insightsPrompt = `
-        You are an expert marketing analyst. Analyze the product reviews and generate comprehensive marketing insights.
-        
-        Return your analysis in a structured JSON format with the following categories:
-        
-        1. benefits: Array of objects with benefit name, frequency (number), and example quotes
-        2. painPoints: Array of objects with pain point and example quotes
-        3. valuedFeatures: Array of objects with feature and example quotes
-        4. priorObjections: Array of objects with objection and example quotes
-        5. failedSolutions: Array of objects with solution and example quotes
-        6. emotionalTriggers: Array of objects with trigger and example quotes
-        7. customerPersonas: Array of 5 distinct customer personas with name, description, needs, and pain points
-        8. headlines: Array of 10 ready-to-use marketing headlines
-        9. competitivePositioning: Array of objects with positioning angle and explanation
-        10. triggerEvents: Array of specific events that trigger product need
-        11. objectionResponses: Array of objects with common objections and effective responses
-        12. hooks: Array of 8 one-liner hooks for marketing
-        
-        For each insight that requires examples, include at least 2-3 direct quotes from reviews.
-        Ensure all insights are data-driven and based on patterns found in the reviews.
-        
-        Your response will be parsed and validated according to a strict schema, so ensure it matches the expected format.
-      `;
-      
-      // Query the engine
-      console.log("Generating insights...");
-      const response = await queryEngine.query({
-        query: insightsPrompt,
-      });
-      
-      // Get the response and process it
-      console.log("Response received, processing...");
-      
-      // The response should now be properly structured according to our schema
-      // but we need to handle possible formatting issues
-      let parsedInsights: ProductInsights;
-      
+    let allReviews: ReviewSource[] = [];
+    
+    console.log("Fetching reviews from review_sources table...");
+    console.time("fetch-reviews-time");
+    
+    // If we have a product URL, fetch Trustpilot reviews
+    if (productUrl) {
       try {
-        const responseText = response.response;
-        
-        // Check if the response is wrapped in code blocks and extract the JSON
-        const jsonRegex = /```(?:json)?\s*([\s\S]*?)```|({[\s\S]*})/m;
-        const match = responseText.match(jsonRegex);
-        
-        let jsonContent = responseText;
-        if (match && match[1]) {
-          // Extract JSON from code block
-          jsonContent = match[1].trim();
-        } else if (match && match[2]) {
-          // Extract direct JSON
-          jsonContent = match[2].trim();
+        // Extract domain from URL for Trustpilot matching
+        let domain = productUrl;
+        try {
+          const url = new URL(domain);
+          domain = url.hostname;
+        } catch (error) {
+          // If URL parsing fails, just use the raw value
+          console.warn("Failed to parse URL for domain extraction:", error);
         }
         
-        // Parse and validate with Zod
-        const jsonResponse = JSON.parse(jsonContent);
-        parsedInsights = insightsSchema.parse(jsonResponse);
+        console.log(`Searching for Trustpilot reviews with domain: ${domain}`);
+        const { data: trustpilotReviews, error: trustpilotError } = await supabase
+          .from("review_sources")
+          .select("*")
+          .eq("product_source", domain)
+          .eq("source", "trustpilot")
+          .order("review_date", { ascending: false })
+          .limit(300);
         
-        console.log("Successfully parsed and validated insights");
+        if (trustpilotError) {
+          console.error("Error fetching Trustpilot reviews:", trustpilotError);
+        } else if (trustpilotReviews && trustpilotReviews.length > 0) {
+          console.log(`Found ${trustpilotReviews.length} Trustpilot reviews`);
+          allReviews = [...allReviews, ...trustpilotReviews];
+        }
       } catch (error) {
-        console.error("Error processing insights response:", error);
-        throw new Error("Failed to parse or validate the AI generated insights. Error: " + (error instanceof Error ? error.message : String(error)));
+        console.error("Error processing Trustpilot reviews:", error);
       }
-      
-      // Store the insights
-      const { error: insertError } = await supabase
-        .from("products")
-        .update({
-          metadata: {
-            ...product.metadata, // Preserve existing metadata
-            insights: parsedInsights,
-            insights_generated_at: new Date().toISOString()
-          }
-        })
-        .eq("id", productId);
-      
-      if (insertError) {
-        console.error("Error storing insights in product metadata:", insertError);
-      }
-      
-      return {
-        success: true,
-        insights: parsedInsights,
-        cached: false
-      };
-    } finally {
-      // Restore original LLM settings
-      Settings.llm = originalLLM;
     }
+    
+    // If we have an Amazon ASIN, fetch Amazon reviews
+    if (amazonAsin) {
+      try {
+        console.log(`Searching for Amazon reviews with ASIN: ${amazonAsin}`);
+        const { data: amazonReviews, error: amazonError } = await supabase
+          .from("review_sources")
+          .select("*")
+          .eq("product_source", amazonAsin)
+          .eq("source", "amazon")
+          .order("review_date", { ascending: false })
+          .limit(300);
+        
+        if (amazonError) {
+          console.error("Error fetching Amazon reviews:", amazonError);
+        } else if (amazonReviews && amazonReviews.length > 0) {
+          console.log(`Found ${amazonReviews.length} Amazon reviews`);
+          allReviews = [...allReviews, ...amazonReviews];
+        }
+      } catch (error) {
+        console.error("Error processing Amazon reviews:", error);
+      }
+    }
+    
+    // Check if we have any reviews to analyze
+    if (allReviews.length === 0) {
+      throw new Error("No reviews found for this product. Check if the product has correct metadata (URL or ASIN).");
+    }
+    
+    console.timeEnd("fetch-reviews-time");
+    console.log(`Found ${allReviews.length} total reviews to analyze`);
+    
+    // Optimize the review selection to get a balanced sample across ratings
+    console.log("Optimizing review selection...");
+    
+    // Group reviews by rating
+    const reviewsByRating: { [key: number]: ReviewSource[] } = {};
+    
+    allReviews.forEach(review => {
+      const rating = Math.round(review.rating); // Round to nearest integer
+      if (!reviewsByRating[rating]) {
+        reviewsByRating[rating] = [];
+      }
+      reviewsByRating[rating].push(review);
+    });
+    
+    // Get a balanced sample across ratings
+    const maxPerRating = 50; // Maximum reviews per rating
+    const maxTotal = 250; // Maximum total reviews to process
+    let selectedReviews: ReviewSource[] = [];
+    
+    // First ensure we have at least some reviews from each rating level
+    for (let rating = 5; rating >= 1; rating--) {
+      if (reviewsByRating[rating]) {
+        // Prioritize the most recent reviews
+        const ratingReviews = [...reviewsByRating[rating]]
+          .sort((a, b) => {
+            if (!a.review_date) return 1;
+            if (!b.review_date) return -1;
+            return new Date(b.review_date).getTime() - new Date(a.review_date).getTime();
+          })
+          .slice(0, maxPerRating);
+          
+        selectedReviews = [...selectedReviews, ...ratingReviews];
+      }
+    }
+    
+    // Trim to max total if needed
+    if (selectedReviews.length > maxTotal) {
+      console.log(`Limiting from ${selectedReviews.length} to ${maxTotal} reviews for better performance`);
+      selectedReviews = selectedReviews.slice(0, maxTotal);
+    }
+    
+    console.log(`Using ${selectedReviews.length} reviews for analysis (from ${allReviews.length} total)`);
+    
+    // Prepare review text for the prompt context
+    const reviewsText = selectedReviews.map(review => {
+      return `Review ID: ${review.id}
+Rating: ${review.rating || 'N/A'} 
+Title: ${review.review_title || 'No title'}
+Content: ${review.review_text || 'No content'}
+---`;
+    }).join('\n\n');
+    
+    // Define the prompt for generating insights
+    const prompt = `As an expert marketing analyst, analyze these product reviews and generate comprehensive marketing insights.
+
+PRODUCT NAME: ${product.name}
+
+REVIEWS:
+${reviewsText}
+
+Based on these reviews, generate structured marketing insights in these categories:
+1. Benefits ranked by frequency (with example quotes)
+2. Pain points customers had before (with example quotes)
+3. Features they value most (with example quotes)
+4. Prior objections they overcame (with example quotes)
+5. Failed solutions they tried first (with example quotes)
+6. Emotional triggers driving purchases (with example quotes)
+7. 5 distinct customer personas
+8. Ready-to-use static headlines
+9. Competitive positioning angles
+10. Specific trigger events
+11. Responses to common objections
+12. One-liners for hooks
+
+Ensure all insights are data-driven and based on patterns found in the reviews.
+For each insight that requires examples, include at least 2-3 direct quotes from reviews.`;
+    
+    // Use AI SDK's generateObject with timing
+    console.log("Generating insights with AI SDK...");
+    console.time("ai-sdk-generation-time");
+    
+    // Configure the OpenAI model
+    const model = openai("gpt-4o-mini");
+    
+    const { object: insights } = await generateObject({
+      model,
+      schema: insightsSchema,
+      schemaName: "ProductInsights",
+      schemaDescription: "Structured marketing insights derived from product reviews",
+      prompt,
+      temperature: 0.3, // Slightly higher for more creative marketing insights
+      maxTokens: 4000, // Set a reasonable token limit for the response
+    });
+    
+    console.timeEnd("ai-sdk-generation-time");
+    console.log("Successfully generated insights with AI SDK");
+    
+    // Store the insights
+    const { error: insertError } = await supabase
+      .from("products")
+      .update({
+        metadata: {
+          ...product.metadata, // Preserve existing metadata
+          insights,
+          insights_generated_at: new Date().toISOString()
+        }
+      })
+      .eq("id", productId);
+    
+    if (insertError) {
+      console.error("Error storing insights in product metadata:", insertError);
+    }
+    
+    return {
+      success: true,
+      insights,
+      cached: false
+    };
     
   } catch (error: any) {
     console.error("Error generating product insights:", error);

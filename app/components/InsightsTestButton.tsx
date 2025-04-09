@@ -12,13 +12,19 @@ export default function InsightsTestButton({ productId }: { productId: string })
   const [result, setResult] = useState<any>(null);
   const [selectedTab, setSelectedTab] = useState("benefits");
   const [error, setError] = useState<string | null>(null);
+  const [timeTaken, setTimeTaken] = useState<number | null>(null);
 
   const handleGenerateInsights = async () => {
     setIsLoading(true);
     setError(null);
+    setTimeTaken(null);
     
     try {
+      const startTime = performance.now();
       const response = await generateProductInsights(productId);
+      const endTime = performance.now();
+      setTimeTaken(endTime - startTime);
+      
       setResult(response);
       
       if (!response.success) {
@@ -37,7 +43,11 @@ export default function InsightsTestButton({ productId }: { productId: string })
     setError(null);
     
     try {
+      const startTime = performance.now();
       const response = await getProductInsights(productId);
+      const endTime = performance.now();
+      setTimeTaken(endTime - startTime);
+      
       setResult(response);
       
       if (!response.success) {
@@ -76,6 +86,13 @@ export default function InsightsTestButton({ productId }: { productId: string })
           Fetch Latest Insights
         </Button>
       </div>
+      
+      {timeTaken !== null && (
+        <div className="text-sm text-muted-foreground">
+          Operation completed in {(timeTaken / 1000).toFixed(2)} seconds
+          {result?.cached && " (cached result)"}
+        </div>
+      )}
       
       {error && (
         <div className="text-sm p-3 bg-red-50 border border-red-200 rounded-md text-red-600">
