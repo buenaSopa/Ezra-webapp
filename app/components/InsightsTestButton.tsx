@@ -159,7 +159,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
               
               {/* Tab 1: Customer Needs & Pain Points */}
               <TabsContent value="customer-needs">
-                <div className="p-3 rounded-lg">
+                <div className="px-3 rounded-lg">
                   <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
                     <Button 
                       variant={activeSubTab['customer-needs'] === 'benefits' ? "default" : "outline"} 
@@ -316,7 +316,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
 
               {/* Tab 4: Competitive Edge */}
               <TabsContent value="competitive-edge">
-                <div className="bg-slate-50 p-3 rounded-lg mb-6">
+                <div className="px-3 rounded-lg">
                   <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
                     <Button 
                       variant={activeSubTab['competitive-edge'] === 'prior-objections' ? "default" : "outline"} 
