@@ -1245,7 +1245,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         </TabsContent>
         
         <TabsContent value="insights" className="pb-6">
-          <DefaultInsightsTab productName={product.name} />
+          <DefaultInsightsTab productName={product.name} productId={params.productId} />
         </TabsContent>
         
         <TabsContent value="chats" className="pb-6">

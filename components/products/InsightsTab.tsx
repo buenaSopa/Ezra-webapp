@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Plus, Star, MessageSquare, Upload, BarChart } from "lucide-react";
 import { ReactNode } from "react";
+import InsightsTestButton from "@/app/components/InsightsTestButton";
 
 interface PromptItem {
   title: string;
@@ -70,7 +71,7 @@ export function InsightsTab({
 }
 
 // Default export with predefined prompt categories
-export default function DefaultInsightsTab({ productName }: { productName: string }) {
+export default function DefaultInsightsTab({ productName, productId }: { productName: string, productId?: string }) {
   const defaultPromptCategories: PromptCategory[] = [
     {
       category: "Customer Insights",
@@ -104,5 +105,21 @@ export default function DefaultInsightsTab({ productName }: { productName: strin
     }
   ];
 
-  return <InsightsTab productName={productName} promptCategories={defaultPromptCategories} />;
+  return (
+    <div className="space-y-8">
+      {productId && (
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-4">AI Marketing Insights Generator</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Generate comprehensive marketing insights based on customer reviews.
+            This tool analyzes customer feedback to identify key benefits, pain points,
+            objections, and more to help optimize your marketing strategy.
+          </p>
+          <InsightsTestButton productId={productId} />
+        </Card>
+      )}
+      
+      <InsightsTab productName={productName} promptCategories={defaultPromptCategories} />
+    </div>
+  );
 } 
