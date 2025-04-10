@@ -18,6 +18,7 @@ import { refreshAllReviews } from "@/app/services/reviewService";
 import { toast, Toaster } from "sonner";
 import useSWR from 'swr';
 import { getScrapingJobsForProduct } from '@/app/actions/scraping-jobs';
+import { createCompetitor } from '@/app/actions/products';
 
 // Import custom components
 import { ProductHeader } from "@/components/products/ProductHeader";
@@ -948,6 +949,82 @@ export default function ProductPage({ params }: ProductPageProps) {
     setEditedCompetitor(null);
   };
 
+  // New function to create a competitor
+  const handleCreateNewCompetitor = async (competitor: { 
+    name: string, 
+    url?: string, 
+    amazonAsin?: string, 
+    description?: string 
+  }) => {
+    if (!product) return;
+    
+    try {
+      const result = await createCompetitor({
+        productId: params.productId,
+        name: competitor.name,
+        url: competitor.url,
+        amazonAsin: competitor.amazonAsin,
+        description: competitor.description
+      });
+      
+      if (!result.success) {
+        toast.error("Failed to create competitor", {
+          description: result.error
+        });
+        throw new Error(result.error);
+      }
+      
+      toast.success("Competitor created successfully", {
+        description: "The competitor has been added to your product."
+      });
+      
+      // Refresh the competitors list
+      const fetchCompetitors = async () => {
+        // First fetch the relations
+        const { data: relations, error: relErr } = await supabase
+          .from("product_to_competitors")
+          .select("*")
+          .eq("product_id", params.productId);
+          
+        if (relErr || !relations) {
+          console.error("Error refreshing competitor relations:", relErr);
+          return;
+        }
+          
+        // Then fetch the products
+        const competitorIds = relations.map(r => r.competitor_product_id);
+        
+        if (competitorIds.length) {
+          const { data: products, error: prodErr } = await supabase
+            .from("products")
+            .select("*")
+            .in("id", competitorIds);
+            
+          if (prodErr) {
+            console.error("Error refreshing competitor products:", prodErr);
+            return;
+          }
+          
+          // Combine data
+          const enriched = relations.map(rel => ({
+            ...rel,
+            competitor: products?.find(p => p.id === rel.competitor_product_id)
+          }));
+          
+          setCompetitors(enriched);
+        } else {
+          setCompetitors([]);
+        }
+      };
+      
+      fetchCompetitors();
+      
+    } catch (error) {
+      console.error("Error in handleCreateNewCompetitor:", error);
+      throw error; // Re-throw to handle in the component
+    }
+  };
+
   // Product save and navigation handlers
   const handleSaveProduct = async () => {
     if (!product) return;
@@ -1234,6 +1311,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 onCancelCompetitorEdit={handleCancelCompetitorEdit}
                 onCompetitorChange={handleCompetitorChange}
                 onCompetitorMetadataChange={handleCompetitorMetadataChange}
+                onCreateNewCompetitor={handleCreateNewCompetitor}
               />
 
               {/* <ProductImage 

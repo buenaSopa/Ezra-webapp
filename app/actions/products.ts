@@ -527,3 +527,161 @@ export async function uploadMarketingResourceFile(
     return { success: false, error: (error as Error).message }
   }
 }
+
+/**
+ * Creates a new competitor for an existing product
+ */
+export async function createCompetitor({
+  productId,
+  name,
+  url,
+  amazonAsin,
+  description
+}: {
+  productId: string,
+  name: string,
+  url?: string,
+  amazonAsin?: string,
+  description?: string
+}) {
+  try {
+    console.log('Creating competitor with data:', JSON.stringify({
+      productId,
+      name,
+      url,
+      amazonAsin,
+      description
+    }, null, 2));
+    
+    const cookieStore = cookies()
+    const supabase = createClient()
+    
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "User not authenticated"
+      }
+    }
+    
+    // Create competitor as a product
+    const { data: competitorData, error: competitorError } = await supabase
+      .from("products")
+      .insert({
+        name,
+        user_id: user.id,
+        metadata: {
+          url,
+          description,
+          amazon_asin: amazonAsin,
+          is_competitor: true,
+          competitor_for: productId
+        }
+      })
+      .select()
+      .single()
+    
+    if (competitorError) {
+      console.error(`Error creating competitor ${name}:`, competitorError);
+      return {
+        success: false,
+        error: `Error creating competitor: ${competitorError.message}`
+      }
+    }
+    
+    console.log(`Competitor ${name} created:`, competitorData);
+    
+    // Create relationship
+    const { error: relationError } = await supabase
+      .from("product_to_competitors")
+      .insert({
+        product_id: productId,
+        competitor_product_id: competitorData.id,
+        relationship_type: "direct_competitor",
+      })
+    
+    if (relationError) {
+      console.error(`Error creating competitor relationship for ${name}:`, relationError);
+      return {
+        success: false,
+        error: `Error creating competitor relationship: ${relationError.message}`
+      }
+    }
+    
+    console.log(`Relationship created between product ${productId} and competitor ${competitorData.id}`);
+    
+    // Define the review check function here to check if reviews already exist
+    const checkExistingReviews = async (source: 'trustpilot' | 'amazon', sourceValue: string) => {
+      try {
+        // Check for existing reviews
+        const { count, error } = await supabase
+          .from("review_sources")
+          .select("id", { count: 'exact', head: true })
+          .eq("product_source", sourceValue)
+          .eq("source", source)
+          .limit(1);
+        
+        if (error) {
+          console.error(`Error checking for existing ${source} reviews:`, error);
+          return false;
+        }
+        
+        return count !== null && count > 0;
+      } catch (error) {
+        console.error(`Error in checkExistingReviews for ${source}:`, error);
+        return false;
+      }
+    };
+    
+    // Trigger scraping for competitor reviews
+    const competitorId = competitorData.id;
+    
+    try {
+      // Trigger Amazon scrape if competitor has an ASIN
+      if (amazonAsin && amazonAsin.trim()) {
+        const competitorAsin = amazonAsin.trim();
+        // Check if reviews already exist
+        const hasCompetitorAmazonReviews = await checkExistingReviews('amazon', competitorAsin);
+        
+        if (!hasCompetitorAmazonReviews) {
+          console.log(` -> Triggering Amazon scrape for competitor ${name} ASIN: ${competitorAsin}`);
+          // Intentionally not awaited - fire and forget
+          getAmazonReviews(competitorAsin, competitorId);
+        } else {
+          console.log(` -> Skipping Amazon scrape for competitor ${name} (reviews already exist)`);
+        }
+      }
+
+      // Trigger Trustpilot scrape if competitor has a URL
+      if (url && url.trim()) {
+        const competitorUrl = url.trim();
+        // Check if reviews already exist
+        const hasCompetitorTrustpilotReviews = await checkExistingReviews('trustpilot', competitorUrl);
+        
+        if (!hasCompetitorTrustpilotReviews) {
+          console.log(` -> Triggering Trustpilot scrape for competitor ${name} URL: ${competitorUrl}`);
+          // Intentionally not awaited - fire and forget
+          startTrustpilotReviewScraping(competitorUrl, competitorId);
+        } else {
+          console.log(` -> Skipping Trustpilot scrape for competitor ${name} (reviews already exist)`);
+        }
+      }
+    } catch (competitorScrapeError) {
+      // Log the error but don't fail the competitor creation process
+      console.error(`Error initiating background scraping tasks for competitor ${name}:`, competitorScrapeError);
+    }
+    
+    return {
+      success: true,
+      competitorId: competitorData.id
+    }
+  } catch (error) {
+    console.error("Error in createCompetitor:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
+    }
+  }
+}

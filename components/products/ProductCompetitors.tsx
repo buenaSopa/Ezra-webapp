@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, AlertCircle, Edit } from "lucide-react";
+import { Plus, AlertCircle, Edit, X, Link, RotateCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
 
 interface Product {
   id: string;
@@ -42,6 +44,7 @@ interface ProductCompetitorsProps {
   onCancelCompetitorEdit: () => void;
   onCompetitorChange: (field: string, value: string) => void;
   onCompetitorMetadataChange: (field: string, value: any) => void;
+  onCreateNewCompetitor?: (competitor: { name: string, url?: string, amazonAsin?: string, description?: string }) => Promise<void>;
 }
 
 export function ProductCompetitors({
@@ -56,9 +59,59 @@ export function ProductCompetitors({
   onSaveCompetitorEdit,
   onCancelCompetitorEdit,
   onCompetitorChange,
-  onCompetitorMetadataChange
+  onCompetitorMetadataChange,
+  onCreateNewCompetitor
 }: ProductCompetitorsProps) {
   const router = useRouter();
+  const [isAddingNewCompetitor, setIsAddingNewCompetitor] = useState(false);
+  const [newCompetitor, setNewCompetitor] = useState({
+    name: '',
+    url: '',
+    amazonAsin: '',
+    description: ''
+  });
+  const [isCreatingCompetitor, setIsCreatingCompetitor] = useState(false);
+
+  const handleNewCompetitorChange = (field: string, value: string) => {
+    setNewCompetitor(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCreateCompetitor = async () => {
+    if (!newCompetitor.name.trim()) {
+      alert("Competitor name is required");
+      return;
+    }
+
+    setIsCreatingCompetitor(true);
+    try {
+      // Call the parent component's create function if provided
+      if (onCreateNewCompetitor) {
+        await onCreateNewCompetitor({
+          name: newCompetitor.name.trim(),
+          url: newCompetitor.url.trim() || undefined,
+          amazonAsin: newCompetitor.amazonAsin.trim() || undefined,
+          description: newCompetitor.description.trim() || undefined
+        });
+      }
+      
+      // Reset form and close
+      setNewCompetitor({
+        name: '',
+        url: '',
+        amazonAsin: '',
+        description: ''
+      });
+      setIsAddingNewCompetitor(false);
+    } catch (error) {
+      console.error("Error creating competitor:", error);
+      alert("Error creating competitor: " + (error as Error).message);
+    } finally {
+      setIsCreatingCompetitor(false);
+    }
+  };
   
   return (
     <div className="space-y-3 pt-4 border-t">
@@ -70,7 +123,7 @@ export function ProductCompetitors({
               type="button" 
               variant="outline" 
               size="sm"
-              onClick={() => console.log('new competitor')}
+              onClick={() => setIsAddingNewCompetitor(true)}
             >
               <Plus className="h-3.5 w-3.5 mr-1" /> New Competitor
             </Button>
@@ -78,6 +131,104 @@ export function ProductCompetitors({
         )}
       </div>
       
+      {/* New Competitor Form */}
+      {isEditing && isAddingNewCompetitor && (
+        <Card className="p-4">
+          <div className="flex justify-between items-start mb-4">
+            <h4 className="text-sm font-medium">Add New Competitor</h4>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsAddingNewCompetitor(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-competitor-name" className="text-xs mb-1">Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="new-competitor-name"
+                value={newCompetitor.name}
+                onChange={(e) => handleNewCompetitorChange('name', e.target.value)}
+                placeholder="Competitor name"
+                className="h-8 text-sm"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="new-competitor-description" className="text-xs mb-1">Description</Label>
+              <Textarea
+                id="new-competitor-description"
+                value={newCompetitor.description}
+                onChange={(e) => handleNewCompetitorChange('description', e.target.value)}
+                placeholder="Add a description for this competitor"
+                className="min-h-[80px] text-sm"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="new-competitor-url" className="text-xs mb-1">Brand URL</Label>
+                <div className="relative">
+                  <Input
+                    id="new-competitor-url"
+                    type="url"
+                    value={newCompetitor.url}
+                    onChange={(e) => handleNewCompetitorChange('url', e.target.value)}
+                    placeholder="https://competitor.com"
+                    className="h-8 text-sm pl-7"
+                  />
+                  <Link className="h-3.5 w-3.5 absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="new-competitor-amazon" className="text-xs mb-1">Amazon ASIN</Label>
+                <Input
+                  id="new-competitor-amazon"
+                  value={newCompetitor.amazonAsin}
+                  onChange={(e) => handleNewCompetitorChange('amazonAsin', e.target.value)}
+                  placeholder="B00EXAMPLE"
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddingNewCompetitor(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleCreateCompetitor}
+                disabled={isCreatingCompetitor || !newCompetitor.name.trim()}
+              >
+                {isCreatingCompetitor ? (
+                  <>
+                    <RotateCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Create Competitor
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {competitors.length ? (
         <div className="space-y-3 max-h-[180px] overflow-y-auto border rounded-md p-3">
           {competitors.map((relation) => {
