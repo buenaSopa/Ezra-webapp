@@ -1231,7 +1231,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                           {(job.status === 'completed' || !job.status) && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-800">
                               <span className="h-1.5 w-1.5 mr-1 rounded-full bg-gray-400"></span>
-                              Processing
+                              No Reviews Found
                             </span>
                           )}
                         </div>
