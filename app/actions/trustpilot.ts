@@ -36,6 +36,8 @@ export async function startTrustpilotReviewScraping(companyWebsite: string, prod
 		// Initialize the ApifyClient
 		const client = new ApifyClient({
 			token: process.env.APIFY_API_TOKEN,
+			maxRetries: 0,
+			timeoutSecs: 600
 		});
 
 		// Extract domain from URL for product_source

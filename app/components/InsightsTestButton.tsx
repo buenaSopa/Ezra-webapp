@@ -171,7 +171,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
                     size="sm"
                     onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'pain-points'})}
                   >
-                    Pain Points
+                    Complaints
                   </Button>
                   <Button 
                     variant={activeSubTab['customer-needs'] === 'valued-features' ? "default" : "outline"} 
@@ -203,7 +203,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
               {/* Pain Points */}
               {activeSubTab['customer-needs'] === 'pain-points' && (
                 <div>
-                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Pain Points</h2>
+                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Complaints</h2>
                   <div className="divide-y">
                     {renderQuotesList(result.insights.painPoints, 'painPoint')}
                   </div>

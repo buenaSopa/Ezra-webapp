@@ -7,7 +7,6 @@ import crypto from 'crypto';
 
 // Constants
 const APIFY_CLIENT = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
-const WEBHOOK_SECRET = process.env.APIFY_WEBHOOK_SECRET;
 
 // Actor IDs
 const ACTORS = {

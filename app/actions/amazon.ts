@@ -23,6 +23,8 @@ export async function getAmazonReviews(
 		// Initialize the ApifyClient with your API token from environment variable
 		const client = new ApifyClient({
 			token: process.env.APIFY_API_TOKEN,
+			maxRetries: 0,
+			timeoutSecs: 480
 		});
 
 		// Create a scraping job record
