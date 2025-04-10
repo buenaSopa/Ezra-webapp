@@ -121,13 +121,6 @@ export async function generateProductInsights(productId: string, useCache: boole
       try {
         // Extract domain from URL for Trustpilot matching
         let domain = productUrl;
-        try {
-          const url = new URL(domain);
-          domain = url.hostname;
-        } catch (error) {
-          // If URL parsing fails, just use the raw value
-          console.warn("Failed to parse URL for domain extraction:", error);
-        }
         
         console.log(`Searching for Trustpilot reviews with domain: ${domain}`);
         const { data: trustpilotReviews, error: trustpilotError } = await supabase
