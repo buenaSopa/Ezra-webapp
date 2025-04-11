@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
-
+import { OpenAI } from "llamaindex";
+import { createChatEngine } from "@/lib/chat-engine";
+import { internalPrimePrompt } from "@/lib/prompts/prompt";
 /**
  * Create a new chat session for a product
  */
@@ -58,6 +60,77 @@ export async function createChatSession({
   } catch (error: any) {
     console.error("Error in createChatSession:", error);
     return { success: false, error: error.message };
+  }
+}
+
+
+export async function generateAndSaveProductSummary(productId: string) {
+  
+  try {
+    const supabase = createClient();
+    
+    // First check if product already has a summary in metadata
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("metadata")
+      .eq("id", productId)
+      .single();
+    
+    if (productError) {
+      console.error("Error fetching product:", productError);
+      return { success: false, error: productError.message };
+    }
+    
+    // If product already has a summary and it's not too old, return it
+    if (product?.metadata?.summary && product?.metadata?.summary_generated_at) {
+      const lastGenerated = new Date(product.metadata.summary_generated_at);
+      const now = new Date();
+      const daysSinceGeneration = Math.floor((now.getTime() - lastGenerated.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // If summary was generated in the last 7 days, return it
+      if (daysSinceGeneration < 7) {
+        console.log(`Using existing summary from ${daysSinceGeneration} days ago`);
+        return { success: true, summary: product.metadata.summary, cached: true };
+      }
+    }
+    
+    // Initialize LLM
+    const llm = new OpenAI({
+      model: "gpt-4o",
+      temperature: 0.1,
+    });
+    
+    // Create chat engine
+    const chatEngine = await createChatEngine(llm, productId);
+    
+    // Get response from chat engine
+    const response = await chatEngine.chat({
+      message: internalPrimePrompt
+    });
+    
+    const summary = response.response;
+    
+    // Save the summary to product metadata
+    const { error: updateError } = await supabase
+      .from("products")
+      .update({
+        metadata: {
+          ...product.metadata, // Preserve existing metadata
+          summary,
+          summary_generated_at: new Date().toISOString()
+        }
+      })
+      .eq("id", productId);
+    
+    if (updateError) {
+      console.error("Error saving summary to product metadata:", updateError);
+      return { success: false, error: updateError.message };
+    }
+    
+    return { success: true, summary, cached: false };
+  } catch (error: any) {
+    console.error("Error generating product summary:", error);
+    return { success: false, error: error.message || "Unknown error occurred" };
   }
 }
 

@@ -8,6 +8,8 @@ Settings.callbackManager.on("retrieve-end", (event) => {
     "Retrieved nodes:", 
     nodes.map((node: NodeWithScore) => node.node.getContent(MetadataMode.NONE))
   );
+
+  console.log('Words count', nodes.map((node: NodeWithScore) => node.node.getContent(MetadataMode.NONE).split(' ').length))
 });
 
 // Qdrant connection configuration

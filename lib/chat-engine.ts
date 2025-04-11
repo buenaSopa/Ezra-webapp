@@ -87,6 +87,7 @@ async function getCompetitorNames(competitorIds: string[]): Promise<string[]> {
 export async function createChatEngine(llm: LLM, productId?: string) {
 	// Get Qdrant vector store
 	const qdrantVectorStore = getQdrantVectorStore();
+    const supabase = createClient();
 
 	// Create index from the vector store
 	const index = await VectorStoreIndex.fromVectorStore(qdrantVectorStore);
@@ -94,12 +95,25 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	let filters: MetadataFilters;
 	let productName: string | null = null;
 	let competitorNames: string[] = [];
+	let productSummary: string | null = null;
 	
 	if (productId) {
 		// Fetch product name
 		productName = await getProductName(productId);
 		console.log(`Product name for ${productId}: ${productName || 'Unknown'}`);
-		
+
+    // First check if product already has a summary in metadata
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("metadata")
+      .eq("id", productId)
+      .single();
+    
+    // If product already has a summary and it's not too old, return it
+    if (product?.metadata?.summary) {
+        productSummary = product.metadata.summary;
+    }
+    
 		// Fetch competitor IDs for the given product
 		const competitorIds = await getCompetitorIds(productId);
 		console.log(`Found ${competitorIds.length} competitors for product ${productId}`);
@@ -143,10 +157,12 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 
 	// Create retriever
 	const retriever = index.asRetriever({
-		similarityTopK: 50,
+		similarityTopK: 5,
 		filters: filters
 	});
 	
+console.log('Summary', productSummary)
+
 	// Base sys
 	let systemPrompt
 	// Add product-specific context if we have a product name
@@ -159,7 +175,10 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 		
 		systemPrompt = `
 	You are an AI assistant for a Creative Strategist, specializing in analyzing reviews for the product "${productName}" and its competitors. Your role is to process large volumes of reviews, extract meaningful insights, and provide strategic creative ads recommendations specific to "${productName}".
-	
+
+	context summary of ${productName}:
+	${productSummary}
+
 	${competitorsText}
 	
 	Identify emerging trends, customer sentiments, common praises, and pain points across "${productName}" and its competitors. Compare and contrast how "${productName}" performs against competitors, highlighting competitive advantages and areas for improvement.
@@ -175,38 +194,23 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 terminology:
 Concept
 A concept is the broad problem, benefit, or theme being addressed in an ad or campaign. It acts as the foundation for creative strategy. Concepts are not specific to a moment or audience — they define what the ad is about at a core level.
-
 Examples:
-
 Dry skin
-
 Hairfall
-
 Fast shipping
-
 Low energy
-
 Detanning
-
 Sleep issues
-
 Think of the concept as the category of desire or frustration the ad will speak to.
 
 Angle
 An angle is the specific lens, context, or scenario used to present a concept. It defines how the concept is positioned for a particular audience, moment, or mindset. A single concept can have dozens of angles depending on use case, season, persona, or trigger.
-
 Examples (for the concept of Dry Skin):
-
 Dry skin ruining your birthday photos (Event-based angle)
-
 Post-flight dryness and skincare fatigue (Lifestyle angle)
-
 “I’ve tried everything but nothing works” (High awareness, saturated audience angle)
-
 Winter dryness in Northern India (Regional angle)
-
 Angles bring the concept to life through context. They create relevance.
-
 
 if user's ask for like ads script or ad concepts u can use these templates, choose one of them based on either user's 
 query or your best judgement as a creative strategist expert:

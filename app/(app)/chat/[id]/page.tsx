@@ -10,7 +10,8 @@ import {
   getChatSession, 
   getChatMessages, 
   updateChatSessionTitle,
-  deleteChatSession
+  deleteChatSession,
+  generateAndSaveProductSummary
 } from "@/app/actions/chat-actions";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical } from "lucide-react";
@@ -57,6 +58,36 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // useEffect to generate product summary before loading chat data
+  useEffect(() => {
+    const generateProductSummary = async () => {
+      try {
+        if (!id) return;
+        
+        // Get chat session details first to get the product ID
+        const sessionResult = await getChatSession(id);
+        if (!sessionResult.success || !sessionResult.data?.product_id) {
+          console.log("Could not get product ID from chat session");
+          return;
+        }
+        
+        const productId = sessionResult.data.product_id;
+        
+        // Call the server action to generate and save product summary
+        const summaryResult = await generateAndSaveProductSummary(productId);
+        if (!summaryResult.success) {
+          console.error("Error generating product summary:", summaryResult.error);
+        } else if (!summaryResult.cached) {
+          console.log("Generated new product summary:", summaryResult.summary);
+        }
+      } catch (err) {
+        console.error("Error in generateProductSummary:", err);
+      }
+    };
+    
+    generateProductSummary();
+  }, [id]);
 
   // Initialize the AI SDK chat hook
   const {
@@ -119,15 +150,6 @@ export default function ChatPage({ params }: ChatPageProps) {
     
     loadChatData();
   }, [id, setMessages]);
-
-  // Custom submit handler to intercept the form submission
-  const handleSendMessage = (formData: FormData) => {
-    const message = formData.get('message') as string;
-    if (!message?.trim()) return;
-    
-    // Pass to AI SDK's handleSubmit
-    handleSubmit(new Event('submit') as any);
-  };
 
   // Handle editing the chat title
   const handleEditTitle = () => {
@@ -200,7 +222,7 @@ export default function ChatPage({ params }: ChatPageProps) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <Spinner size="lg" />
-        <p className="mt-4 text-muted-foreground">Loading chat session...</p>
+        <p className="mt-4 text-muted-foreground">AI analyzing product for chat... (30 seconds)</p>
       </div>
     );
   }
