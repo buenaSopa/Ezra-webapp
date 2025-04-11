@@ -176,8 +176,10 @@ console.log('Summary', productSummary)
 		systemPrompt = `
 	You are an AI assistant for a Creative Strategist, specializing in analyzing reviews for the product "${productName}" and its competitors. Your role is to process large volumes of reviews, extract meaningful insights, and provide strategic creative ads recommendations specific to "${productName}".
 
-	context summary of ${productName}:
+	Product summary of ${productName}:
 	${productSummary}
+
+	if user ask for product summary, give them the summary above
 
 	${competitorsText}
 	
