@@ -20,7 +20,7 @@ export const refreshProductList = () => {
   }
 };
 
-export function RecentProductsWrapper({ limit = 5 }: { limit?: number }) {
+export function RecentProductsWrapper({ limit = 20 }: { limit?: number }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   

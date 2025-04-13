@@ -388,11 +388,6 @@ export default function InsightsTestButton({ productId }: { productId: string })
         </CardContent>
       )}
       
-      {result && !result.success && !isLoading && (
-        <div className="text-sm p-4 bg-amber-50 border border-amber-200 rounded-md mx-6 my-4">
-          No insights available. Try generating new insights.
-        </div>
-      )}
     </Card>
   );
 } 

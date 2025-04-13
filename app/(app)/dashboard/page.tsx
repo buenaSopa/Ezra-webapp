@@ -19,7 +19,7 @@ export default async function Dashboard() {
         <h1 className="text-4xl font-bold mb-2">Welcome to Ezra</h1>
         <p className="text-muted-foreground">Your AI-powered creative strategist for better marketing decisions</p>
       </div>
-      <RecentChats limit={4} />
+      <RecentChats limit={5} />
     </div>
   );
 } 

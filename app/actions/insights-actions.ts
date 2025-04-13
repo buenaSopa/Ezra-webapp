@@ -167,7 +167,7 @@ export async function generateProductInsights(productId: string, useCache: boole
     
     // Check if we have any reviews to analyze
     if (allReviews.length === 0) {
-      throw new Error("No reviews found for this product. Check if the product has correct metadata (URL or ASIN).");
+      throw new Error("No reviews found for this product. Please wait for the reviews to finish scraping.");
     }
     
     console.timeEnd("fetch-reviews-time");

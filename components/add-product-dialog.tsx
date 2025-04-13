@@ -44,6 +44,11 @@ type Resource = {
   forEntityId?: string; // Links resource to either main product or a competitor
 }
 
+// Helper function to remove trailing slashes from URLs
+const removeTrailingSlash = (url: string): string => {
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+};
+
 // Shared form component
 function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCancel?: () => void }) {
   const router = useRouter()
@@ -68,6 +73,12 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
 
   const handleCompetitorChange = (index: number, field: keyof Competitor, value: string | File[]) => {
     const updatedCompetitors = [...competitors]
+    
+    // If the field is a URL, remove trailing slash
+    if (field === 'url' && typeof value === 'string') {
+      value = removeTrailingSlash(value);
+    }
+    
     updatedCompetitors[index] = {
       ...updatedCompetitors[index],
       [field]: value
@@ -182,8 +193,13 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
     // Get form data
     const formData = new FormData(e.currentTarget)
     const productName = formData.get("productName") as string
-    const productUrl = formData.get("productUrl") as string
+    let productUrl = formData.get("productUrl") as string
     const productAmazonAsin = formData.get("productAmazonAsin") as string
+    
+    // Clean up product URL
+    if (productUrl) {
+      productUrl = removeTrailingSlash(productUrl);
+    }
     
     // Only check if we have a product name - no other validation
     if (!productName) {
@@ -488,7 +504,10 @@ function AddProductForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCan
                     <Input
                       type="url"
                       value={competitor.url}
-                      onChange={(e) => handleCompetitorChange(index, 'url', e.target.value)}
+                      onChange={(e) => {
+                        const url = removeTrailingSlash(e.target.value);
+                        handleCompetitorChange(index, 'url', url);
+                      }}
                       placeholder="https://example.com"
                     />
                   </div>

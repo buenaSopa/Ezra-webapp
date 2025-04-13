@@ -22,7 +22,7 @@ interface RecentChatsProps {
   limit?: number;
 }
 
-export async function RecentChats({ limit = 5 }: RecentChatsProps) {
+export async function RecentChats({ limit = 30 }: RecentChatsProps) {
   const { success, data: chatSessions } = await getUserChatSessions();
   
   // If there are no chat sessions, show the get started message
