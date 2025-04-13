@@ -3,7 +3,7 @@
 import { createClient } from "@/app/utils/supabase/server";
 import { OpenAI } from "llamaindex";
 import { createChatEngine } from "@/lib/chat-engine";
-import { internalPrimePrompt } from "@/lib/prompts/prompt";
+import { productSummaryPrompt as internalPrimePrompt } from "@/lib/prompts/prompt";
 /**
  * Create a new chat session for a product
  */
