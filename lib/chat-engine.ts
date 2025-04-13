@@ -2,7 +2,6 @@
 import { ContextChatEngine, LLM, MetadataFilters, storageContextFromDefaults, VectorStoreIndex } from "llamaindex";
 import { getQdrantVectorStore } from "./qdrant";
 import { createClient } from "@/app/utils/supabase/server";
-import { adsCreativeTemplate } from "./prompts/prompt";
 
 /**
  * Fetches competitor product IDs for a given product
@@ -96,64 +95,89 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	let productName: string | null = null;
 	let competitorNames: string[] = [];
 	let productSummary: string | null = null;
+	let productSources: string[] = [];
+	let competitorSources: string[] = [];
 	
-	if (productId) {
-		// Fetch product name
-		productName = await getProductName(productId);
-		console.log(`Product name for ${productId}: ${productName || 'Unknown'}`);
+		// Fetch product name and metadata
+		const { data: product, error: productError } = await supabase
+			.from("products")
+			.select("name, metadata")
+			.eq("id", productId)
+			.single();
+			
+		if (productError) {
+			console.error("Error fetching product:", productError);
+		} else {
+			productName = product.name;
+			console.log(`Product name for ${productId}: ${productName || 'Unknown'}`);
+			
+			// If product already has a summary
+			if (product?.metadata?.summary) {
+				productSummary = product.metadata.summary;
+			}
+			
+			// Get product sources from metadata
+			if (product?.metadata?.url) {
+				// Extract domain from URL for matching
+					productSources.push(product.metadata.url);
 
-    // First check if product already has a summary in metadata
-    const { data: product, error: productError } = await supabase
-      .from("products")
-      .select("metadata")
-      .eq("id", productId)
-      .single();
-    
-    // If product already has a summary and it's not too old, return it
-    if (product?.metadata?.summary) {
-        productSummary = product.metadata.summary;
-    }
+			}
+			
+			if (product?.metadata?.amazon_asin) {
+				productSources.push(product.metadata.amazon_asin);
+			}
+		}
     
 		// Fetch competitor IDs for the given product
-		const competitorIds = await getCompetitorIds(productId);
+		const competitorIds = await getCompetitorIds(productId!);
 		console.log(`Found ${competitorIds.length} competitors for product ${productId}`);
 		
-		// Fetch competitor names if there are any competitors
+		// Fetch competitor names and sources if there are any competitors
 		if (competitorIds.length > 0) {
+			// Get competitor names
 			competitorNames = await getCompetitorNames(competitorIds);
 			console.log(`Competitor names: ${competitorNames.join(', ') || 'None found'}`);
+			
+			// Get competitor sources
+			try {
+				const { data: competitors, error: competitorsError } = await supabase
+					.from("products")
+					.select("metadata")
+					.in("id", competitorIds);
+					
+				if (!competitorsError && competitors) {
+					for (const competitor of competitors) {
+						if (competitor?.metadata?.url) {
+								competitorSources.push(competitor.metadata.url);
+						
+						}
+						
+						if (competitor?.metadata?.amazon_asin) {
+							competitorSources.push(competitor.metadata.amazon_asin);
+						}
+					}
+				}
+			} catch (error) {
+				console.error("Error fetching competitor sources:", error);
+			}
 		}
 		
-		// Create a filter that includes both the main product and its competitors
-		if (competitorIds.length > 0) {
-			// If there are competitors, create an OR filter with all product IDs
-			const allProductIds = [productId, ...competitorIds];
-			
+		// Create a filter with all product sources
+		const allSources = [...productSources, ...competitorSources].filter(Boolean);
+		
+
 			filters = {
 				filters: [{
-					key: "productId",
-					value: allProductIds,
+					key: "productSource",
+					value: allSources,
 					operator: "in"
 				}]
 			};
 			
-			console.log(`Using filter with ${allProductIds.length} products: ${JSON.stringify(filters)}`);
-		} else {
-			// If no competitors, just use the main product ID
-			filters = {
-				filters: [{
-					key: "productId",
-					value: productId,
-					operator: "=="
-				}]
-			};
-		}
-	} else {
-		// If no product ID provided, don't apply any filter
-		filters = {
-			filters: []
-		};
-	}
+			console.log(`Using filter with sources: ${JSON.stringify(allSources)}`);
+			console.log(`Filter: ${JSON.stringify(filters)}`);
+
+	
 
 	// Create retriever
 	const retriever = index.asRetriever({
@@ -205,7 +229,7 @@ An angle is the specific lens, context, or scenario used to present a concept. I
 Examples (for the concept of Dry Skin):
 Dry skin ruining your birthday photos (Event-based angle)
 Post-flight dryness and skincare fatigue (Lifestyle angle)
-“I’ve tried everything but nothing works” (High awareness, saturated audience angle)
+"I've tried everything but nothing works" (High awareness, saturated audience angle)
 Winter dryness in Northern India (Regional angle)
 Angles bring the concept to life through context. They create relevance.
 
