@@ -14,7 +14,7 @@ import {
   generateAndSaveProductSummary
 } from "@/app/actions/chat-actions";
 import { Spinner } from "@/components/ui/spinner";
-import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -36,6 +36,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { ChatSuggestionsPanel } from "@/components/chat/chat-suggestions-panel";
 
 interface ChatPageProps {
   params: {
@@ -58,6 +59,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showMobileSuggestions, setShowMobileSuggestions] = useState(false);
 
   // useEffect to generate product summary before loading chat data
   useEffect(() => {
@@ -97,7 +99,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     handleSubmit,
     isLoading: isSending,
     setMessages,
-    error: chatError
+    error: chatError,
+    append
   } = useChat({
     api: "/api/chat",
     body: {
@@ -218,6 +221,33 @@ export default function ChatPage({ params }: ChatPageProps) {
     metadata: msg.annotations?.length ? { sources: msg.annotations } : undefined
   }));
 
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: {
+    content: string;
+    hiddenPrompt: string;
+  }) => {
+    if (suggestion.content.trim()) {
+
+      append({
+        role: "user",
+        content: suggestion.content,
+      },
+      {
+        body: {
+          productId: chatSession?.product_id,
+          sessionId: id,
+          metadata: {
+            hiddenPrompt: suggestion.hiddenPrompt
+          }
+        }
+      }
+    );
+
+      // Close mobile suggestions panel after selecting
+      setShowMobileSuggestions(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -279,76 +309,113 @@ export default function ChatPage({ params }: ChatPageProps) {
         ) : (
           <div className="flex-1 flex items-center justify-between">
             <h2 className="text-lg font-medium">{chatSession?.title}</h2>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEditTitle}>
-                  <Edit className="h-4 w-4 mr-2" /> Edit Title
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem 
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        setDeleteDialogOpen(true);
-                      }}
-                      className="text-red-500"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Delete Chat
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action will permanently delete this chat session and all its messages.
-                        This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={handleDeleteChat} 
-                        disabled={isDeleting}
-                        className="bg-red-500 hover:bg-red-600"
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setShowMobileSuggestions(!showMobileSuggestions)}
+              >
+                <Sparkles className="h-4 w-4" />
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEditTitle}>
+                    <Edit className="h-4 w-4 mr-2" /> Edit Title
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem 
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="text-red-500"
                       >
-                        {isDeleting ? (
-                          <>
-                            <Spinner size="sm" className="mr-2" />
-                            Deleting...
-                          </>
-                        ) : (
-                          "Delete"
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Chat
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action will permanently delete this chat session and all its messages.
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteChat} 
+                          disabled={isDeleting}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <Spinner size="sm" className="mr-2" />
+                              Deleting...
+                            </>
+                          ) : (
+                            "Delete"
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         )}
       </div>
       
+      {/* Mobile suggestions panel */}
+      {showMobileSuggestions && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setShowMobileSuggestions(false)}>
+          <div className="absolute right-0 top-0 bottom-0 w-3/4 max-w-xs bg-white shadow-xl" 
+            onClick={(e) => e.stopPropagation()}>
+            <div className="h-full flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="font-medium">AI Prompts</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowMobileSuggestions(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <ChatSuggestionsPanel onSuggestionClick={handleSuggestionClick} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Adjust top padding to account for the header */}
-      <div className="pt-16 h-full">
-        <ChatContainer
-          messages={adaptedMessages}
-          onSendMessage={(message) => {
-            if (message.trim()) {
-              // Set the message and trigger submission
-              handleInputChange({ target: { value: message } } as React.ChangeEvent<HTMLInputElement>);
-              handleSubmit(new Event('submit') as any);
-            }
-          }}
-          isLoading={isSending}
-          inputValue={input}
-          onInputChange={handleInputChange}
+      <div className="pt-16 h-full flex">
+        <div className="flex-1">
+          <ChatContainer
+            messages={adaptedMessages}
+            onSendMessage={(message) => {
+              if (message.trim()) {
+                // Set the message and trigger submission
+                handleInputChange({ target: { value: message } } as React.ChangeEvent<HTMLInputElement>);
+                handleSubmit(new Event('submit') as any);
+              }
+            }}
+            isLoading={isSending}
+            inputValue={input}
+            onInputChange={handleInputChange}
+          />
+        </div>
+        <ChatSuggestionsPanel 
+          onSuggestionClick={handleSuggestionClick}
+          className="hidden lg:block"
         />
       </div>
     </div>

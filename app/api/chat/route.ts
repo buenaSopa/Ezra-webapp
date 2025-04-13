@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
   const streamData = new StreamData();
   
   try {
-    const { messages, productId, sessionId } = await request.json();
+    const { messages, productId, sessionId, metadata } = await request.json();
 
     console.log(`[Chat API] chat messages: ${JSON.stringify(messages)}`);
-    
+    console.log(`[Chat API] metadata: ${JSON.stringify(metadata)}`);
     console.log(`[Chat API] Received request for session ${sessionId}`, { 
       productId,
       messageCount: messages?.length
@@ -72,8 +72,12 @@ export async function POST(request: NextRequest) {
     
     // Convert the entire message history into a conversation string
     // This creates a properly formatted context of the entire conversation
-    const conversationContext = formatMessageHistoryAsString(messages);
+    let conversationContext = formatMessageHistoryAsString(messages);
     console.log("[Chat API] Formatted conversation context:", conversationContext);
+
+   if (metadata?.hiddenPrompt) {
+    conversationContext += `\n\n${metadata.hiddenPrompt}`;
+   }
     
     // Get streaming response with the full conversation context
     console.log("[Chat API] Getting streaming response");
