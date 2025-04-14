@@ -332,9 +332,77 @@ REVIEWS:
 ${reviewsText}
 
 Based on these reviews, generate structured insights for:
-1. Ready-to-use marketing headlines that would resonate with customers
+1. Ready-to-use marketing headlines that would resonate with customers:
+Choose 5 different headline structures from the following proven direct response templates and apply one per line:
+ 
+ 1. Problem → Relief
+ - Tired of [frustration]?
+ - Say Goodbye to [problem]
+ - Stop [undesired outcome] For Good
+ 1. Desire → Shortcut
+ - Get [desired result] Without [hard part]
+ - The Fastest Way to [outcome]
+ - Make [activity] Easy Again
+ 1. Curiosity + Emotion
+ - What Most People Don’t Know About [topic]
+ - Is This the Fix for [problem]?
+ - What Changed Everything for Mealtime
+ 1. Fear/Guilt
+ - Don’t Use [risky alternative]
+ - Still Using [wrong product]?
+ - Could This Be Hurting Your [child/baby]?
+ 1. Reason Why / List Format
+ - 3 Reasons Parents Switch to This
+ - 5 Ways to Simplify [problem]
+ - One Product. Multiple Problems Solved.
+ 1. Command
+ - Ditch the [old solution]
+ - Start [activity] Smarter
+ - Fix [problem] Now
+ 1. Testimonial / Transformation
+ - “Finally, No More [frustration]”
+ - The Set I Wish I Had from Day One
+ - What Made Mealtimes Actually Enjoyable
+Headlines must:
+ - Be under 8 words
+ - Be emotionally specific
+ - Be suitable for Meta ads, landing pages, or image creatives
+ - Use customer language wherever possible
+ - Feel like something someone would think or say, not a slogan
+ You must choose only headline formats that align with the tone and voice of the reviews.
+ 
+
 2. Competitive positioning angles with explanations
+
+
 3. One-liner hooks for marketing copy that capture attention
+These hooks will be used in ads (Meta, TikTok, landing pages, UGC scripts) and must be written to trigger emotion, curiosity, or urgency in the first 2 seconds.
+
+Step 1: Internally analyze the reviews (do not output this part)
+What product is this, based on how customers describe it?
+What is the main problem it solves?
+What are customers frustrated with before using it?
+What transformation or relief are they getting after?
+What specific language do they use to describe it?
+What emotion is most common: guilt, relief, excitement, overwhelm?
+
+Step 2: Choose hook angles that align with review language and customer awareness
+Hooks should fall into one or more of the following categories:
+Problem-first (frustration, overwhelm, mess, confusion)
+Emotion-first (guilt, relief, pride, fear, “am I doing this right?”)
+Testimonial-style (“I didn’t expect this to work but…”)
+Unexpected claim (“This cup replaced everything”)
+Curiosity trigger (“Most parents don’t realize this…”)
+Mistake-based (“You’re probably doing this wrong”)
+Visual set-up (“Here’s what feeding used to look like”)
+
+Step 3: Write 5 hooks that are:
+1 sentence each (ideally under 20 words)
+Written in real, human language — not brand voice
+Designed to stop the scroll immediately
+Specific, emotionally charged, and reflective of real customer experience
+Use wording pulled or inspired from actual reviews
+
 
 Ensure all insights are data-driven and based on patterns found in the reviews.
 Make them compelling, specific to this product, and based on actual customer language.`;
