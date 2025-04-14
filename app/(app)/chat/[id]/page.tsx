@@ -14,7 +14,7 @@ import {
   generateAndSaveProductSummary
 } from "@/app/actions/chat-actions";
 import { Spinner } from "@/components/ui/spinner";
-import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical, Sparkles } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Check, X, MoreVertical, Sparkles, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { ChatSuggestionsPanel } from "@/components/chat/chat-suggestions-panel";
+import { ChatInsightsPanel } from "@/components/chat/chat-insights-panel";
+import { ChatSidebarPanel } from "@/components/chat/chat-sidebar-panel";
 
 interface ChatPageProps {
   params: {
@@ -316,7 +318,8 @@ export default function ChatPage({ params }: ChatPageProps) {
                 className="lg:hidden"
                 onClick={() => setShowMobileSuggestions(!showMobileSuggestions)}
               >
-                <Sparkles className="h-4 w-4" />
+                <Database className="h-4 w-4" />
+                <span className="sr-only">AI Assistant</span>
               </Button>
               
               <DropdownMenu>
@@ -383,13 +386,19 @@ export default function ChatPage({ params }: ChatPageProps) {
             onClick={(e) => e.stopPropagation()}>
             <div className="h-full flex flex-col">
               <div className="flex justify-between items-center p-4 border-b">
-                <h3 className="font-medium">AI Prompts</h3>
+                <h3 className="font-medium">AI Assistant</h3>
                 <Button variant="ghost" size="sm" onClick={() => setShowMobileSuggestions(false)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                <ChatSuggestionsPanel onSuggestionClick={handleSuggestionClick} />
+              <div className="flex-1 overflow-hidden">
+                <ChatSidebarPanel
+                  productId={chatSession?.product_id || ""}
+                  onSuggestionClick={(suggestion) => {
+                    handleSuggestionClick(suggestion);
+                    setShowMobileSuggestions(false);
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -413,7 +422,8 @@ export default function ChatPage({ params }: ChatPageProps) {
             onInputChange={handleInputChange}
           />
         </div>
-        <ChatSuggestionsPanel 
+        <ChatSidebarPanel
+          productId={chatSession?.product_id || ""}
           onSuggestionClick={handleSuggestionClick}
           className="hidden lg:block"
         />

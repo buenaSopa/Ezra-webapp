@@ -49,13 +49,6 @@ export function ChatSuggestionsPanel({ onSuggestionClick, className }: ChatSugge
   return (
     <div className={`w-full lg:w-64 border-l bg-gray-50/50 p-4 ${className || ''} overflow-y-auto`}>
       <div className="space-y-5">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-primary">
-            <Sparkles className="h-4 w-4" />
-            <h3 className="text-sm font-medium">AI Prompts</h3>
-          </div>
-          <p className="text-xs text-muted-foreground">Quick prompts to get insights</p>
-        </div>
         
         <div className="space-y-2">
           {suggestions.map((suggestion, index) => (
