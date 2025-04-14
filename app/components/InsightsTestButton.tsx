@@ -174,6 +174,13 @@ export default function InsightsTestButton({ productId }: { productId: string })
                     Complaints
                   </Button>
                   <Button 
+                    variant={activeSubTab['customer-needs'] === 'pain-points' ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'pain-points'})}
+                  >
+                    Pain Points
+                  </Button>
+                  <Button 
                     variant={activeSubTab['customer-needs'] === 'valued-features' ? "default" : "outline"} 
                     size="sm"
                     onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'valued-features'})}
@@ -206,6 +213,16 @@ export default function InsightsTestButton({ productId }: { productId: string })
                   <h2 className="text-xl font-bold mb-4 pb-2 border-b">Complaints</h2>
                   <div className="divide-y">
                     {renderQuotesList(result.insights.complaints, 'complaint')}
+                  </div>
+                </div>
+              )}
+
+              {/* Pain Points */}
+              {activeSubTab['customer-needs'] === 'pain-points' && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4 pb-2 border-b">Pain Points Before Purchase</h2>
+                  <div className="divide-y">
+                    {renderQuotesList(result.insights.painPoints, 'painPoint')}
                   </div>
                 </div>
               )}
@@ -252,9 +269,11 @@ export default function InsightsTestButton({ productId }: { productId: string })
                     <div>
                       <h4 className="text-sm font-semibold mb-1">Complaints:</h4>
                       <ul className="list-disc pl-5 text-sm space-y-1">
-                        {persona.complaints.map((complaint: string, i: number) => (
+                        {persona.complaints ? persona.complaints.map((complaint: string, i: number) => (
                           <li key={i}>{complaint}</li>
-                        ))}
+                        )) : (
+                          <li>No complaints data available</li>
+                        )}
                       </ul>
                     </div>
                   </div>

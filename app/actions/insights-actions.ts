@@ -18,6 +18,10 @@ const customerFeedbackSchema = z.object({
     complaint: z.string().describe("A complaint customers had about the product"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this complaint"))
   })),
+  painPoints: z.array(z.object({
+    painPoint: z.string().describe("A pain point or problem customers faced before using the product"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this pre-purchase pain point"))
+  })),
   valuedFeatures: z.array(z.object({
     feature: z.string().describe("A feature of the product that customers value"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this feature"))
@@ -74,6 +78,10 @@ const insightsSchema = z.object({
   })),
   complaints: z.array(z.object({
     complaint: z.string(),
+    examples: z.array(z.string())
+  })),
+  painPoints: z.array(z.object({
+    painPoint: z.string(),
     examples: z.array(z.string())
   })),
   valuedFeatures: z.array(z.object({
@@ -141,7 +149,8 @@ ${reviewsText}
 Based on these reviews, generate structured insights for:
 1. Benefits ranked by frequency (with example quotes)
 2. Complaints customers had about the product (with example quotes)
-3. Features they value most (with example quotes)
+3. Pain points that customers faced before using this product (with example quotes)
+4. Features they value most (with example quotes)
 
 Ensure all insights are data-driven and based on patterns found in the reviews.
 For each insight, include at least 2-3 direct quotes from reviews as examples.`;
@@ -462,6 +471,7 @@ Content: ${review.review_text || 'No content'}
       // Customer feedback insights
       benefits: customerFeedbackInsights.benefits,
       complaints: customerFeedbackInsights.complaints,
+      painPoints: customerFeedbackInsights.painPoints,
       valuedFeatures: customerFeedbackInsights.valuedFeatures,
       
       // Objection handling insights
@@ -535,9 +545,12 @@ export async function getProductInsights(productId: string) {
       };
     }
     
+    // Migrate old insights to the new schema if needed
+    const migratedInsights = migrateInsightsSchema(data.metadata.insights);
+    
     return {
       success: true,
-      insights: data.metadata.insights,
+      insights: migratedInsights,
       generatedAt: data.metadata.insights_generated_at
     };
     
@@ -548,4 +561,46 @@ export async function getProductInsights(productId: string) {
       error: error.message || "Unknown error occurred"
     };
   }
-} 
+}
+
+/**
+ * Migrates old insights data to the new schema format, handling missing fields
+ */
+function migrateInsightsSchema(insights: any) {
+  // Create a deep copy to avoid modifying the original
+  const migrated = JSON.parse(JSON.stringify(insights));
+  
+  // Add missing fields that were added in schema updates
+  
+  // Handle conversion from painPoints to complaints if needed
+  if (!migrated.complaints && migrated.painPoints) {
+    // If we have the old painPoints but not complaints, convert it
+    migrated.complaints = migrated.painPoints.map((point: any) => {
+      return {
+        complaint: point.painPoint,
+        examples: point.examples || []
+      };
+    });
+  } else if (!migrated.complaints) {
+    // If no complaints and no painPoints, create empty array
+    migrated.complaints = [];
+  }
+  
+  // Add painPoints if not present (new field)
+  if (!migrated.painPoints) {
+    migrated.painPoints = [];
+  }
+  
+  // Make sure customerPersonas have complaints field
+  if (migrated.customerPersonas) {
+    migrated.customerPersonas = migrated.customerPersonas.map((persona: any) => {
+      if (!persona.complaints) {
+        // Try to use painPoints if available, otherwise empty array
+        persona.complaints = persona.painPoints || [];
+      }
+      return persona;
+    });
+  }
+  
+  return migrated;
+}
