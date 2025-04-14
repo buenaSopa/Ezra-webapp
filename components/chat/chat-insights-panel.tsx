@@ -14,6 +14,7 @@ interface ChatInsightsPanelProps {
   isLoading?: boolean;
   error?: string | null;
   onFetchInsights?: () => Promise<void>;
+  onGenerateInsights?: () => Promise<void>;
 }
 
 export function ChatInsightsPanel({ 
@@ -22,7 +23,8 @@ export function ChatInsightsPanel({
   insightsData: externalInsightsData,
   isLoading: externalLoading,
   error: externalError,
-  onFetchInsights: externalFetchInsights
+  onFetchInsights: externalFetchInsights,
+  onGenerateInsights: externalGenerateInsights
 }: ChatInsightsPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("benefits");
   const [localInsightsData, setLocalInsightsData] = useState<any>(null);
@@ -56,6 +58,12 @@ export function ChatInsightsPanel({
 
   const fetchInsights = externalFetchInsights || localFetchInsights;
 
+  const localGenerateInsights = async () => {
+    alert("Generate insights not supported in standalone mode");
+  };
+
+  const generateInsights = externalGenerateInsights || localGenerateInsights;
+
   const togglePersona = (index: number) => {
     setExpandedPersonas(prev => ({
       ...prev,
@@ -82,15 +90,28 @@ export function ChatInsightsPanel({
     }
 
     if (error) {
-      return <div className="p-4 text-center text-sm text-red-500">{error}</div>;
+      return (
+        <div className="p-4 text-center space-y-3">
+          <div className="text-sm text-red-500">{error}</div>
+          <Button variant="default" size="sm" onClick={generateInsights}>
+            Generate Insights
+          </Button>
+        </div>
+      );
     }
 
     if (!insightsData) {
       return (
-        <div className="p-4 text-center text-sm text-muted-foreground">
-          <Button variant="secondary" size="sm" onClick={fetchInsights}>
-            Load Insights
-          </Button>
+        <div className="p-4 text-center space-y-3">
+          <div className="text-sm text-muted-foreground">No insights available for this product.</div>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" size="sm" onClick={fetchInsights}>
+              Check Again
+            </Button>
+            <Button variant="default" size="sm" onClick={generateInsights}>
+              Generate Insights
+            </Button>
+          </div>
         </div>
       );
     }

@@ -5,7 +5,8 @@ import { Database, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatInsightsPanel } from "./chat-insights-panel";
 import { ChatSuggestionsPanel } from "./chat-suggestions-panel";
-import { getProductInsights } from "@/app/actions/insights-actions";
+import { getProductInsights, generateProductInsights } from "@/app/actions/insights-actions";
+import { toast } from "sonner";
 
 interface ChatSidebarPanelProps {
   productId: string;
@@ -25,6 +26,7 @@ export function ChatSidebarPanel({
   const [insightsData, setInsightsData] = useState<any>(null);
   const [insightsLoading, setInsightsLoading] = useState<boolean>(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   
   // Shared fetch function for insights data
   const fetchInsights = async () => {
@@ -35,15 +37,47 @@ export function ChatSidebarPanel({
     
     try {
       const response = await getProductInsights(productId);
+      
       if (response.success) {
         setInsightsData(response.insights);
       } else {
-        setInsightsError(response.error || "Failed to load insights");
+        // If no insights found, generate them automatically
+        if (response.error === "No insights found for this product" && !isGenerating) {
+          await generateInsights();
+        } else {
+          setInsightsError(response.error || "Failed to load insights");
+        }
       }
     } catch (err: any) {
       setInsightsError(err.message || "An error occurred");
     } finally {
       setInsightsLoading(false);
+    }
+  };
+
+  // Function to generate new insights
+  const generateInsights = async () => {
+    if (!productId || isGenerating) return;
+    
+    setIsGenerating(true);
+    setInsightsError(null);
+    toast.info("Generating insights... This may take a minute.");
+    
+    try {
+      const response = await generateProductInsights(productId, false);
+      
+      if (response.success) {
+        setInsightsData(response.insights);
+        toast.success("Insights generated successfully!");
+      } else {
+        setInsightsError(response.error || "Failed to generate insights");
+        toast.error("Failed to generate insights");
+      }
+    } catch (err: any) {
+      setInsightsError(err.message || "An error occurred");
+      toast.error("Error generating insights");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -56,7 +90,7 @@ export function ChatSidebarPanel({
             className="flex items-center gap-1.5 data-[state=active]:bg-white"
             onClick={() => {
               // Fetch insights data if not already loaded when clicking the tab
-              if (!insightsData && !insightsLoading) {
+              if (!insightsData && !insightsLoading && !isGenerating) {
                 fetchInsights();
               }
             }}
@@ -77,9 +111,10 @@ export function ChatSidebarPanel({
           <ChatInsightsPanel 
             productId={productId}
             insightsData={insightsData}
-            isLoading={insightsLoading}
+            isLoading={insightsLoading || isGenerating}
             error={insightsError}
             onFetchInsights={fetchInsights}
+            onGenerateInsights={generateInsights}
             className="!w-full !border-l-0 h-full !p-0"
           />
         </TabsContent>
