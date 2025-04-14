@@ -37,6 +37,10 @@ export default function InsightsTestButton({ productId }: { productId: string })
       
       setResult(response);
       
+      if (!response) {
+        throw new Error('No response from generateProductInsights')
+      }
+
       if (!response.success) {
         setError(response.error || "Failed to generate insights");
       }

@@ -122,7 +122,10 @@ export function ChatInsightsPanel({
           <div className="p-4 space-y-3">
             {insightsData.benefits.map((item: any, index: number) => (
               <div key={index} className="border rounded-md p-3 text-sm">
-                <div className="font-medium">{item.benefit}</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-medium border rounded-md p-1 text-xs bg-blue-50 text-blue-800">{item.frequency}</div>
+                  <div className="font-medium">{item.benefit}</div>
+                </div>
                 {item.examples && item.examples.length > 0 && (
                   <div className="mt-1.5 text-xs text-gray-600 italic">
                     "{item.examples[0]}"

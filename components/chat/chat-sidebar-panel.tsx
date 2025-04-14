@@ -65,6 +65,10 @@ export function ChatSidebarPanel({
     
     try {
       const response = await generateProductInsights(productId, false);
+
+      if (!response) {
+        throw new Error('No response from generateProductInsights')
+      }
       
       if (response.success) {
         setInsightsData(response.insights);
