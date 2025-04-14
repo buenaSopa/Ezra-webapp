@@ -29,21 +29,21 @@ export function ChatSidebarPanel({
             className="flex items-center gap-1.5 data-[state=active]:bg-white"
           >
             <Database className="h-3.5 w-3.5" />
-            <span>AI Insights</span>
+            <span>Insights</span>
           </TabsTrigger>
           <TabsTrigger 
             value="prompts" 
             className="flex items-center gap-1.5 data-[state=active]:bg-white"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>AI Prompts</span>
+            <span>Prompts</span>
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="insights" className="flex-1 p-0 m-0 overflow-hidden">
           <ChatInsightsPanel 
             productId={productId} 
-            className="!w-full !border-l-0 h-full"
+            className="!w-full !border-l-0 h-full !p-0"
           />
         </TabsContent>
         

@@ -14,34 +14,42 @@ export function ChatSuggestionsPanel({ onSuggestionClick, className }: ChatSugge
   const suggestions = [
     {
       content: "Product Summary",
+      description: "Get a concise overview of the product's key features and benefits",
       hiddenPrompt: productSummaryPrompt
     },
     {
       content: 'Belief Challenge',
+      description: "Identify and challenge limiting beliefs customers might have",
       hiddenPrompt: beliefPrompt
     },
     {
       content: 'Concepts and Angles',
+      description: "Generate unique positioning concepts and marketing angles",
       hiddenPrompt: conceptAnglePrompt
     },
     {
       content: 'Customer Avatar',
+      description: "Create detailed personas based on real customer profiles",
       hiddenPrompt: customerAvatarPrompt
     },
     {
       content: 'Ads Scripts',
+      description: "Generate ready-to-use ad copy for different platforms",
       hiddenPrompt: adsCreativeTemplate
     },
     {
       content: 'Headlines',
+      description: "Craft attention-grabbing headlines for marketing materials",
       hiddenPrompt: headlinePrompt
     },
     {
       content: 'Hook',
+      description: "Create compelling hooks to capture audience interest",
       hiddenPrompt: hookPrompt
     },
     {
       content: 'Competitor Analysis',
+      description: "Analyze how the product compares to competing offerings",
       hiddenPrompt: compareToCompetitorsPrompt
     },
   ];
@@ -52,15 +60,22 @@ export function ChatSuggestionsPanel({ onSuggestionClick, className }: ChatSugge
         
         <div className="space-y-2">
           {suggestions.map((suggestion, index) => (
-            <Button
+            <div
               key={index}
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-left h-auto py-2.5 px-3 text-sm font-normal border border-transparent hover:border-gray-200 hover:bg-white/80 rounded-md"
-              onClick={() => onSuggestionClick(suggestion)}
+              className="border border-transparent hover:border-gray-200 hover:bg-white/80 rounded-md transition-colors"
             >
-              {suggestion.content}
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-left h-auto py-2.5 px-3 font-normal"
+                onClick={() => onSuggestionClick(suggestion)}
+              >
+                <div className="flex flex-col">
+                  <span>{suggestion.content}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5 text-wrap">{suggestion.description}</span>
+                </div>
+              </Button>
+            </div>
           ))}
         </div>
         
