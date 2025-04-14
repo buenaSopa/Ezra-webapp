@@ -4,6 +4,7 @@ import { createClient } from "@/app/utils/supabase/server";
 import { z } from "zod";
 import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { createRetrieverForDocumentResources } from "@/lib/chat-engine";
 
 // Split the schema into 4 separate schemas for parallel processing
 
@@ -444,6 +445,15 @@ export async function generateProductInsights(productId: string, useCache: boole
       .eq("id", productId)
       .single();
     
+    const { data: resources, error: resourcesError } = await supabase
+		  .from("product_marketing_resources")
+		  .select("id")
+		  .eq("product_id", productId);
+
+	  if (!resources) {
+		  return null;
+	  }
+    
     if (productError || !product) {
       throw new Error(`Product not found: ${productError?.message || "Unknown error"}`);
     }
@@ -525,7 +535,7 @@ export async function generateProductInsights(productId: string, useCache: boole
     }
     
     // Check if we have any reviews to analyze
-    if (allReviews.length === 0) {
+    if (allReviews.length === 0 && !resources) {
       throw new Error("No reviews found for this product. Please wait for the reviews to finish scraping.");
     }
     
@@ -576,13 +586,25 @@ export async function generateProductInsights(productId: string, useCache: boole
     console.log(`Using ${selectedReviews.length} reviews for analysis (from ${allReviews.length} total)`);
     
     // Prepare review text for the prompt context
-    const reviewsText = selectedReviews.map(review => {
+    let reviewsText = selectedReviews.map(review => {
       return `Review ID: ${review.id}
-Rating: ${review.rating || 'N/A'} 
-Title: ${review.review_title || 'No title'}
-Content: ${review.review_text || 'No content'}
----`;
+        Rating: ${review.rating || 'N/A'} 
+        Title: ${review.review_title || 'No title'}
+        Content: ${review.review_text || 'No content'}
+        ---`;
     }).join('\n\n');
+
+    if (resources) {
+      const retriever = await createRetrieverForDocumentResources(productId);
+
+      if (!retriever) {
+        throw new Error('No reviews found for this product')
+      }
+
+      const nodeWithResources = await retriever.retrieve({query: 'reviews'})
+	    console.log('nodeWithResources', nodeWithResources.map(node => node.node.toJSON().text))
+      reviewsText += `\n\n${nodeWithResources.map(node => node.node.toJSON().text).join('\n\n')}`
+    }
     
     // Use Promise.all to generate insights in parallel
     console.log("Generating insights in parallel with AI SDK...");

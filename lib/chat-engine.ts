@@ -28,33 +28,6 @@ async function getCompetitorIds(productId: string): Promise<string[]> {
 		return [];
 	}
 }
-
-/**
- * Fetches product name for a given product ID
- */
-async function getProductName(productId: string): Promise<string | null> {
-	try {
-		const supabase = createClient();
-		
-		// Fetch product name from the products table
-		const { data: productData, error } = await supabase
-			.from("products")
-			.select("name")
-			.eq("id", productId)
-			.single();
-			
-		if (error) {
-			console.error("Error fetching product name:", error);
-			return null;
-		}
-		
-		return productData?.name || null;
-	} catch (error) {
-		console.error("Error in getProductName:", error);
-		return null;
-	}
-}
-
 /**
  * Fetches competitor names for a given array of competitor IDs
  */
@@ -81,6 +54,39 @@ async function getCompetitorNames(competitorIds: string[]): Promise<string[]> {
 		console.error("Error in getCompetitorNames:", error);
 		return [];
 	}
+}
+
+
+export async function createRetrieverForDocumentResources(productId: string) {
+	const supabase = createClient();
+	const qdrantVectorStore = getQdrantVectorStore();
+	let filters: MetadataFilters;
+
+	const index = await VectorStoreIndex.fromVectorStore(qdrantVectorStore);
+
+	const { data: resources, error } = await supabase
+		.from("product_marketing_resources")
+		.select("id")
+		.eq("product_id", productId);
+
+	if (!resources) {
+		return null;
+	}
+
+	filters = {
+		filters: [{
+			key: "resourceId",
+			value: resources.map(resource => resource.id),
+			operator: "in"
+		}]
+	}
+
+	const retriever = index.asRetriever({
+		similarityTopK: 8,
+		filters: filters
+	});
+
+	return retriever
 }
 
 export async function createChatEngine(llm: LLM, productId?: string) {
@@ -222,7 +228,7 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 		filters: filters
 	});
 	
-console.log('Summary', productSummary)
+	console.log('Summary', productSummary)
 
 	// Base sys
 	let systemPrompt
@@ -235,45 +241,45 @@ console.log('Summary', productSummary)
 		}
 		
 		systemPrompt = `
-	You are an AI assistant for a Creative Strategist, specializing in analyzing reviews for the product "${productName}" and its competitors. Your role is to process large volumes of reviews, extract meaningful insights, and provide strategic creative ads recommendations specific to "${productName}".
+		You are an AI assistant for a Creative Strategist, specializing in analyzing reviews for the product "${productName}" and its competitors. Your role is to process large volumes of reviews, extract meaningful insights, and provide strategic creative ads recommendations specific to "${productName}".
 
-	${competitorsText}
+		${competitorsText}
 	
-	Identify emerging trends, customer sentiments, common praises, and pain points across "${productName}" and its competitors. Compare and contrast how "${productName}" performs against competitors, highlighting competitive advantages and areas for improvement.
+		Identify emerging trends, customer sentiments, common praises, and pain points across "${productName}" and its competitors. Compare and contrast how "${productName}" performs against competitors, highlighting competitive advantages and areas for improvement.
 	
-	Offer assistance based on the user's query, focusing on insights that inform brand positioning, marketing strategies, and creative direction for "${productName}". If asked about specific competitors, provide detailed analysis about those competitors.
+		Offer assistance based on the user's query, focusing on insights that inform brand positioning, marketing strategies, and creative direction for "${productName}". If asked about specific competitors, provide detailed analysis about those competitors.
 	
-	If a request falls outside this scope, politely inform the user and guide them back to relevant topics. Keep responses concise, data-driven, and directly relevant to strategic decision-making.
-	`;
+		If a request falls outside this scope, politely inform the user and guide them back to relevant topics. Keep responses concise, data-driven, and directly relevant to strategic decision-making.
+		`;
 	}
 	
 	// Add the ad terminology section
 	systemPrompt += `
-terminology:
-Concept
-A concept is the broad problem, benefit, or theme being addressed in an ad or campaign. It acts as the foundation for creative strategy. Concepts are not specific to a moment or audience — they define what the ad is about at a core level.
-Examples:
-Dry skin
-Hairfall
-Fast shipping
-Low energy
-Detanning
-Sleep issues
-Think of the concept as the category of desire or frustration the ad will speak to.
+	terminology:
+	Concept
+	A concept is the broad problem, benefit, or theme being addressed in an ad or campaign. It acts as the foundation for creative strategy. Concepts are not specific to a moment or audience — they define what the ad is about at a core level.
+	Examples:
+	Dry skin
+	Hairfall
+	Fast shipping
+	Low energy
+	Detanning
+	Sleep issues
+	Think of the concept as the category of desire or frustration the ad will speak to.
 
-Angle
-An angle is the specific lens, context, or scenario used to present a concept. It defines how the concept is positioned for a particular audience, moment, or mindset. A single concept can have dozens of angles depending on use case, season, persona, or trigger.
-Examples (for the concept of Dry Skin):
-Dry skin ruining your birthday photos (Event-based angle)
-Post-flight dryness and skincare fatigue (Lifestyle angle)
-"I've tried everything but nothing works" (High awareness, saturated audience angle)
-Winter dryness in Northern India (Regional angle)
-Angles bring the concept to life through context. They create relevance.
+	Angle
+	An angle is the specific lens, context, or scenario used to present a concept. It defines how the concept is positioned for a particular audience, moment, or mindset. A single concept can have dozens of angles depending on use case, season, persona, or trigger.
+	Examples (for the concept of Dry Skin):
+		Dry skin ruining your birthday photos (Event-based angle)
+	Post-flight dryness and skincare fatigue (Lifestyle angle)
+	"I've tried everything but nothing works" (High awareness, saturated audience angle)
+	Winter dryness in Northern India (Regional angle)
+	Angles bring the concept to life through context. They create relevance.
 
-important: do not make up reviews that are not given to you, only use the ones that are given
-`;
+	imortant: do not make up reviews that are not given to you, only use the ones that are given
+	`;
 
-console.log('LLM', llm)
+	console.log('LLM', llm)
 
 	// Create and return the chat engine
 	return new ContextChatEngine({
