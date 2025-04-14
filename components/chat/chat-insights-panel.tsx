@@ -10,42 +10,57 @@ import { getProductInsights } from "@/app/actions/insights-actions";
 interface ChatInsightsPanelProps {
   productId: string;
   className?: string;
+  insightsData?: any;
+  isLoading?: boolean;
+  error?: string | null;
+  onFetchInsights?: () => Promise<void>;
 }
 
-export function ChatInsightsPanel({ productId, className }: ChatInsightsPanelProps) {
+export function ChatInsightsPanel({ 
+  productId, 
+  className,
+  insightsData: externalInsightsData,
+  isLoading: externalLoading,
+  error: externalError,
+  onFetchInsights: externalFetchInsights
+}: ChatInsightsPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("benefits");
-  const [insightsData, setInsightsData] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localInsightsData, setLocalInsightsData] = useState<any>(null);
+  const [localLoading, setLocalLoading] = useState<boolean>(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [expandedPersonas, setExpandedPersonas] = useState<Record<number, boolean>>({});
 
-  // Toggle persona expansion
+  const insightsData = externalInsightsData || localInsightsData;
+  const loading = externalLoading !== undefined ? externalLoading : localLoading;
+  const error = externalError !== undefined ? externalError : localError;
+
+  const localFetchInsights = async () => {
+    if (localInsightsData || localLoading) return;
+    
+    setLocalLoading(true);
+    setLocalError(null);
+    
+    try {
+      const response = await getProductInsights(productId);
+      if (response.success) {
+        setLocalInsightsData(response.insights);
+      } else {
+        setLocalError(response.error || "Failed to load insights");
+      }
+    } catch (err: any) {
+      setLocalError(err.message || "An error occurred");
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const fetchInsights = externalFetchInsights || localFetchInsights;
+
   const togglePersona = (index: number) => {
     setExpandedPersonas(prev => ({
       ...prev,
       [index]: !prev[index]
     }));
-  };
-
-  // Fetch insights data if not already loaded
-  const fetchInsights = async () => {
-    if (insightsData || loading) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await getProductInsights(productId);
-      if (response.success) {
-        setInsightsData(response.insights);
-      } else {
-        setError(response.error || "Failed to load insights");
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Tabs configuration

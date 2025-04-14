@@ -5,6 +5,7 @@ import { Database, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatInsightsPanel } from "./chat-insights-panel";
 import { ChatSuggestionsPanel } from "./chat-suggestions-panel";
+import { getProductInsights } from "@/app/actions/insights-actions";
 
 interface ChatSidebarPanelProps {
   productId: string;
@@ -20,6 +21,32 @@ export function ChatSidebarPanel({
   onSuggestionClick, 
   className 
 }: ChatSidebarPanelProps) {
+  // Add state to store insights data at the parent level
+  const [insightsData, setInsightsData] = useState<any>(null);
+  const [insightsLoading, setInsightsLoading] = useState<boolean>(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+  
+  // Shared fetch function for insights data
+  const fetchInsights = async () => {
+    if (insightsData || insightsLoading) return;
+    
+    setInsightsLoading(true);
+    setInsightsError(null);
+    
+    try {
+      const response = await getProductInsights(productId);
+      if (response.success) {
+        setInsightsData(response.insights);
+      } else {
+        setInsightsError(response.error || "Failed to load insights");
+      }
+    } catch (err: any) {
+      setInsightsError(err.message || "An error occurred");
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
   return (
     <div className={`w-full lg:w-72 border-l bg-gray-50/50 flex flex-col ${className || ''}`}>
       <Tabs defaultValue="insights" className="flex flex-col h-full">
@@ -27,6 +54,12 @@ export function ChatSidebarPanel({
           <TabsTrigger 
             value="insights" 
             className="flex items-center gap-1.5 data-[state=active]:bg-white"
+            onClick={() => {
+              // Fetch insights data if not already loaded when clicking the tab
+              if (!insightsData && !insightsLoading) {
+                fetchInsights();
+              }
+            }}
           >
             <Database className="h-3.5 w-3.5" />
             <span>Insights</span>
@@ -42,7 +75,11 @@ export function ChatSidebarPanel({
         
         <TabsContent value="insights" className="flex-1 p-0 m-0 overflow-hidden">
           <ChatInsightsPanel 
-            productId={productId} 
+            productId={productId}
+            insightsData={insightsData}
+            isLoading={insightsLoading}
+            error={insightsError}
+            onFetchInsights={fetchInsights}
             className="!w-full !border-l-0 h-full !p-0"
           />
         </TabsContent>
