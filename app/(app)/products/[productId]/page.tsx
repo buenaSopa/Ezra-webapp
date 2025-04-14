@@ -80,7 +80,11 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [editingCompetitorId, setEditingCompetitorId] = useState<string | null>(null);
   const [editedCompetitor, setEditedCompetitor] = useState<Product | null>(null);
-  const [reviewCount, setReviewCount] = useState<number>(0);
+  const [reviewSourcesFound, setReviewSourcesFound] = useState<{
+    trustpilot: boolean; 
+    amazon: boolean;
+    hasAny: boolean;
+  }>({ trustpilot: false, amazon: false, hasAny: false });
   const [hasRunningJobs, setHasRunningJobs] = useState<boolean>(false);
   const [isStartingChat, setIsStartingChat] = useState<boolean>(false);
   // Track original URL and ASIN for detecting changes
@@ -511,85 +515,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     
     fetchProduct();
   }, [params.productId, supabase, isRefreshingReviews]);
-  
-  // Fetch review count
-  useEffect(() => {
-    const fetchReviewCount = async () => {
-      if (!params.productId || !product) return;
-      
-      // Count direct reviews linked to product_id
-      const { count: directCount, error: directError } = await supabase
-        .from("reviews")
-        .select("*", { count: 'exact', head: true })
-        .eq("product_id", params.productId);
-      
-      if (directError) {
-        console.error("Error fetching direct review count:", directError);
-      }
-      
-      // Get product metadata for URL and ASIN matching
-      const productUrl = product.metadata?.url;
-      const amazonAsin = product.metadata?.amazon_asin;
-      
-      let sourceReviewCount = 0;
-      
-      // If we have a product URL, count Trustpilot reviews
-      if (productUrl) {
-        try {
-          // Extract domain from URL for Trustpilot matching
-          let domain = productUrl;
-          try {
-            const url = new URL(domain);
-            domain = url.hostname;
-          } catch (error) {
-            // If URL parsing fails, just use the raw value
-            console.warn("Failed to parse URL for domain extraction:", error);
-          }
-          
-          const { count: trustpilotCount, error: trustpilotError } = await supabase
-            .from("review_sources")
-            .select("*", { count: 'exact', head: true })
-            .eq("product_source", domain)
-            .eq("source", "trustpilot");
-          
-          if (trustpilotError) {
-            console.error("Error fetching Trustpilot review count:", trustpilotError);
-          } else if (trustpilotCount !== null) {
-            sourceReviewCount += trustpilotCount;
-          }
-        } catch (error) {
-          console.error("Error processing Trustpilot reviews:", error);
-        }
-      }
-      
-      // If we have an Amazon ASIN, count Amazon reviews
-      if (amazonAsin) {
-        try {
-          const { count: amazonCount, error: amazonError } = await supabase
-            .from("review_sources")
-            .select("*", { count: 'exact', head: true })
-            .eq("product_source", amazonAsin)
-            .eq("source", "amazon");
-          
-          if (amazonError) {
-            console.error("Error fetching Amazon review count:", amazonError);
-          } else if (amazonCount !== null) {
-            sourceReviewCount += amazonCount;
-          }
-        } catch (error) {
-          console.error("Error processing Amazon reviews:", error);
-        }
-      }
-      
-      // Combine the counts
-      const totalCount = (directCount || 0) + sourceReviewCount;
-      setReviewCount(totalCount);
-      
-      console.log(`Total review count: ${totalCount} (Direct: ${directCount || 0}, Source: ${sourceReviewCount})`);
-    };
-    
-    fetchReviewCount();
-  }, [params.productId, supabase, product]);
   
   // Add new effect to fetch competitors
   useEffect(() => {
@@ -1065,6 +990,80 @@ export default function ProductPage({ params }: ProductPageProps) {
     }, 200); // Small delay to allow loading state to be visible
   };
 
+  // Function to check if reviews exist for product sources
+  const checkReviewSources = async (product: Product) => {
+    if (!product) return { trustpilot: false, amazon: false, hasAny: false };
+    
+    try {
+      let hasTrustpilotReviews = false;
+      let hasAmazonReviews = false;
+      
+      // Get product metadata for URL and ASIN
+      const productUrl = product.metadata?.url;
+      const amazonAsin = product.metadata?.amazon_asin;
+      
+      // Check for Trustpilot reviews if URL exists
+      if (productUrl) {
+        try {
+          // Extract domain from URL for Trustpilot matching
+          let domain = productUrl;
+          
+          const { count, error } = await supabase
+            .from("review_sources")
+            .select("*", { count: 'exact', head: true })
+            .eq("product_source", domain)
+            .eq("source", "trustpilot");
+          
+          if (!error && count && count > 0) {
+            hasTrustpilotReviews = true;
+            console.log(`Found Trustpilot reviews for domain ${domain}`);
+          }
+        } catch (error) {
+          console.error("Error checking Trustpilot reviews:", error);
+        }
+      }
+      
+      // Check for Amazon reviews if ASIN exists
+      if (amazonAsin) {
+        try {
+          const { count, error } = await supabase
+            .from("review_sources")
+            .select("*", { count: 'exact', head: true })
+            .eq("product_source", amazonAsin)
+            .eq("source", "amazon");
+          
+          if (!error && count && count > 0) {
+            hasAmazonReviews = true;
+            console.log(`Found Amazon reviews for ASIN ${amazonAsin}`);
+          }
+        } catch (error) {
+          console.error("Error checking Amazon reviews:", error);
+        }
+      }
+      
+      console.log("hasTrustpilotReviews", hasTrustpilotReviews);
+      console.log("hasAmazonReviews", hasAmazonReviews);
+      
+      const hasAny = hasTrustpilotReviews || hasAmazonReviews;
+      return { trustpilot: hasTrustpilotReviews, amazon: hasAmazonReviews, hasAny };
+    } catch (error) {
+      console.error("Error checking review sources:", error);
+      return { trustpilot: false, amazon: false, hasAny: false };
+    }
+  };
+
+  // Use effect to check for review sources when product is loaded
+  useEffect(() => {
+    const checkSources = async () => {
+      if (product) {
+        const sources = await checkReviewSources(product);
+        setReviewSourcesFound(sources);
+      }
+    };
+    
+    checkSources();
+  }, [product, scrapingData]); // Include scrapingData to refresh when scraping status changes
+
   if (isLoading) {
     return (
       <div className="container max-w-6xl mx-auto p-6 flex items-center justify-center h-[80vh]">
@@ -1114,7 +1113,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         isStartingChat={isStartingChat}
         onRefreshReviews={handleRefreshAllReviews}
         competitorCount={competitors.length}
-        reviewCount={reviewCount}
+        reviewSourcesFound={reviewSourcesFound}
         onInputChange={handleInputChange}
         onMetadataChange={handleMetadataChange}
         scrapingStatus={getScrapingStatus()}
@@ -1266,6 +1265,33 @@ export default function ProductPage({ params }: ProductPageProps) {
                   </>
                 )}
               </div>
+              
+              {/* Review sources found section */}
+              {!isRefreshingReviews && !hasRunningJobs && reviewSourcesFound && (
+                <div className="mt-3 border-t border-blue-200 pt-3">
+                  <h4 className="text-xs font-medium text-blue-700 mb-2">Reviews found for:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {reviewSourcesFound.trustpilot && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                        <span className="h-1.5 w-1.5 mr-1 rounded-full bg-green-500"></span>
+                        Trustpilot Reviews
+                      </span>
+                    )}
+                    {reviewSourcesFound.amazon && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                        <span className="h-1.5 w-1.5 mr-1 rounded-full bg-green-500"></span>
+                        Amazon Reviews
+                      </span>
+                    )}
+                    {!reviewSourcesFound.hasAny && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="h-1.5 w-1.5 mr-1 rounded-full bg-gray-400"></span>
+                        No reviews found yet
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

@@ -25,7 +25,11 @@ interface ProductHeaderProps {
   isRefreshingReviews?: boolean;
   isStartingChat?: boolean;
   competitorCount?: number;
-  reviewCount?: number;
+  reviewSourcesFound?: {
+    trustpilot: boolean;
+    amazon: boolean;
+    hasAny: boolean;
+  };
   onInputChange: (field: string, value: string) => void;
   onMetadataChange: (field: string, value: any) => void;
   scrapingStatus?: {
@@ -50,7 +54,7 @@ export function ProductHeader({
   isRefreshingReviews = false,
   isStartingChat = false,
   competitorCount = 0,
-  reviewCount = 0,
+  reviewSourcesFound,
   onInputChange,
   onMetadataChange,
   scrapingStatus = { text: 'Ready', color: 'text-muted-foreground', isReady: true },
