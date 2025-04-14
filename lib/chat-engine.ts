@@ -97,6 +97,7 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 	let productSummary: string | null = null;
 	let productSources: string[] = [];
 	let competitorSources: string[] = [];
+	let uploadedDocumentResources: string[] = [];
 	
 		// Fetch product name and metadata
 		const { data: product, error: productError } = await supabase
@@ -162,10 +163,26 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 			}
 		}
 		
-		// Create a filter with all product sources
+		// Fetch uploaded document resources for this product
+		try {
+			const { data: resources, error: resourcesError } = await supabase
+				.from("product_marketing_resources")
+				.select("id")
+				.eq("product_id", productId)
+				
+			if (!resourcesError && resources && resources.length > 0) {
+				console.log(`Found ${resources.length} uploaded document resources for product ${productId}`);
+				uploadedDocumentResources = resources.map(resource => resource.id);
+			}
+		} catch (error) {
+			console.error("Error fetching document resources:", error);
+		}
+		
+		// Create a filter based on available data
 		const allSources = [...productSources, ...competitorSources].filter(Boolean);
 		
-
+		// If we have URL or ASIN sources, use those in the filter
+		if (allSources.length > 0) {
 			filters = {
 				filters: [{
 					key: "productSource",
@@ -175,7 +192,27 @@ export async function createChatEngine(llm: LLM, productId?: string) {
 			};
 			
 			console.log(`Using filter with sources: ${JSON.stringify(allSources)}`);
-			console.log(`Filter: ${JSON.stringify(filters)}`);
+		} 
+		// Otherwise, if we have uploaded document resources, use those in the filter
+		else if (uploadedDocumentResources.length > 0) {
+			filters = {
+				filters: [{
+					key: "resourceId",
+					value: uploadedDocumentResources,
+					operator: "in"
+				}]
+			};
+			
+			console.log(`Using filter with document resources: ${JSON.stringify(uploadedDocumentResources)}`);
+		}
+		// If nothing else, don't apply any filter
+		else {
+			// Default empty filter when no sources are available
+			filters = { filters: [] };
+			console.log(`No sources or resources found for product ${productId}, using empty filter`);
+		}
+			
+		console.log(`Filter: ${JSON.stringify(filters)}`);
 
 	
 

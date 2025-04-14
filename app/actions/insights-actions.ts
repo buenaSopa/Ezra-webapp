@@ -703,7 +703,7 @@ export async function getProductInsights(productId: string) {
       error: error.message || "Unknown error occurred"
     };
   }
-}
+} 
 
 /**
  * Migrates old insights data to the new schema format, handling missing fields
