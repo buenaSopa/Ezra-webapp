@@ -250,31 +250,58 @@ export default function InsightsTestButton({ productId }: { productId: string })
 
             {/* Tab 2: Customer Personas */}
             <TabsContent value="customer-personas" className="px-6 py-4 space-y-4">
-              <h2 className="text-xl font-bold mb-4 pb-2 border-b">Customer Personas</h2>
+              <h2 className="text-xl font-bold mb-4 pb-2 border-b">Customer Personas by Awareness Level</h2>
               {result.insights.customerPersonas.map((persona: any, index: number) => (
-                <div key={index} className="border rounded-lg p-4">
+                <div key={index} className="border rounded-lg p-4 mb-4">
+                  <div className="bg-blue-50 text-blue-800 px-2 py-1 text-xs font-medium rounded inline-block mb-2">
+                    {persona.awarenessLevel}
+                  </div>
                   <h3 className="text-md font-bold mb-1">{persona.name}</h3>
-                  <p className="text-sm mb-3">{persona.description}</p>
+                  <p className="text-sm mb-3 text-gray-600">{persona.demographicSketch}</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-sm font-semibold mb-1">Needs:</h4>
-                      <ul className="list-disc pl-5 text-sm space-y-1">
-                        {persona.needs.map((need: string, i: number) => (
-                          <li key={i}>{need}</li>
-                        ))}
-                      </ul>
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Emotional State:</h4>
+                        <p className="text-sm">{persona.emotionalState}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Internal Beliefs:</h4>
+                        <p className="text-sm">{persona.internalBeliefs}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Current Behaviors:</h4>
+                        <p className="text-sm">{persona.currentBehaviors}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Key Frustration:</h4>
+                        <p className="text-sm">{persona.keyFrustration}</p>
+                      </div>
                     </div>
                     
-                    <div>
-                      <h4 className="text-sm font-semibold mb-1">Complaints:</h4>
-                      <ul className="list-disc pl-5 text-sm space-y-1">
-                        {persona.complaints ? persona.complaints.map((complaint: string, i: number) => (
-                          <li key={i}>{complaint}</li>
-                        )) : (
-                          <li>No complaints data available</li>
-                        )}
-                      </ul>
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Desired Transformation:</h4>
+                        <p className="text-sm">{persona.desiredTransformation}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Trigger Phrase:</h4>
+                        <p className="text-sm italic">"{persona.triggerPhrase}"</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Hook That Would Work:</h4>
+                        <p className="text-sm">{persona.hookThatWouldWork}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Voice of Customer:</h4>
+                        <p className="text-sm italic bg-gray-50 p-2 rounded">"{persona.voiceOfCustomerQuote}"</p>
+                      </div>
                     </div>
                   </div>
                 </div>

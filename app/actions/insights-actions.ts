@@ -40,7 +40,7 @@ const objectionHandlingSchema = z.object({
   }))
 });
 
-// Schema 3: Customer Journey Schema (failed solutions, emotional triggers, customer personas, trigger events)
+// Schema 3: Customer Journey Schema (failed solutions, emotional triggers, trigger events)
 const customerJourneySchema = z.object({
   failedSolutions: z.array(z.object({
     solution: z.string().describe("A solution customers tried before that failed"),
@@ -50,13 +50,24 @@ const customerJourneySchema = z.object({
     trigger: z.string().describe("An emotional trigger that drove purchase decisions"),
     examples: z.array(z.string().describe("Direct quotes from reviews showing this emotional trigger"))
   })),
-  customerPersonas: z.array(z.object({
-    name: z.string().describe("A descriptive name for this customer persona"),
-    description: z.string().describe("Brief description of this customer persona"),
-    needs: z.array(z.string().describe("Specific needs of this customer persona")),
-    complaints: z.array(z.string().describe("Specific complaints of this customer persona"))
-  })),
   triggerEvents: z.array(z.string().describe("Events that trigger the need for this product"))
+});
+
+// Schema for Customer Personas based on awareness levels
+const customerPersonasSchema = z.object({
+  customerPersonas: z.array(z.object({
+    awarenessLevel: z.string().describe("The awareness level (Most Aware, Product Aware, Solution Aware, Problem Aware, Completely Unaware)"),
+    name: z.string().describe("Name representing this persona"),
+    demographicSketch: z.string().describe("Age range, life stage, tone of voice"),
+    emotionalState: z.string().describe("How they feel about their situation"),
+    internalBeliefs: z.string().describe("What they believe about products like this"),
+    currentBehaviors: z.string().describe("What they're doing now to fix the problem"),
+    keyFrustration: z.string().describe("What's not working for them"),
+    desiredTransformation: z.string().describe("What outcome they want emotionally or practically"),
+    triggerPhrase: z.string().describe("A thought or line that shows their mindset"),
+    hookThatWouldWork: z.string().describe("A message or ad idea that would immediately resonate"),
+    voiceOfCustomerQuote: z.string().describe("A direct or paraphrased line from a real review that represents their thinking")
+  }))
 });
 
 // Schema 4: Marketing Copy Schema (headlines, competitive positioning, hooks)
@@ -101,10 +112,17 @@ const insightsSchema = z.object({
     examples: z.array(z.string())
   })),
   customerPersonas: z.array(z.object({
+    awarenessLevel: z.string(),
     name: z.string(),
-    description: z.string(),
-    needs: z.array(z.string()),
-    complaints: z.array(z.string())
+    demographicSketch: z.string(),
+    emotionalState: z.string(),
+    internalBeliefs: z.string(),
+    currentBehaviors: z.string(),
+    keyFrustration: z.string(),
+    desiredTransformation: z.string(),
+    triggerPhrase: z.string(),
+    hookThatWouldWork: z.string(),
+    voiceOfCustomerQuote: z.string()
   })),
   headlines: z.array(z.string()),
   competitivePositioning: z.array(z.object({
@@ -212,7 +230,7 @@ For prior objections, include at least 2-3 direct quotes from reviews as example
 }
 
 /**
- * Generate customer journey insights (failed solutions, emotional triggers, personas, trigger events)
+ * Generate customer journey insights (failed solutions, emotional triggers, trigger events)
  */
 async function generateCustomerJourneyInsights(productName: string, reviewsText: string) {
   const prompt = `As an expert marketing analyst, analyze these product reviews and generate customer journey insights.
@@ -225,8 +243,7 @@ ${reviewsText}
 Based on these reviews, generate structured insights for:
 1. Failed solutions customers tried before (with example quotes)
 2. Emotional triggers driving purchase decisions (with example quotes)
-3. 5 distinct customer personas that represent different segments of users
-4. Specific trigger events that lead customers to need this product
+3. Specific trigger events that lead customers to need this product
 
 Ensure all insights are data-driven and based on patterns found in the reviews.
 For failed solutions and emotional triggers, include at least 2-3 direct quotes from reviews as examples.`;
@@ -246,6 +263,59 @@ For failed solutions and emotional triggers, include at least 2-3 direct quotes 
   
   console.timeEnd("customer-journey-generation-time");
   console.log("Successfully generated customer journey insights");
+  
+  return object;
+}
+
+/**
+ * Generate customer personas based on Eugene Schwartz's awareness levels
+ */
+async function generateCustomerPersonasInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate customer personas based on Eugene Schwartz's awareness levels.
+
+PRODUCT NAME: ${productName}
+
+REVIEWS:
+${reviewsText}
+
+Generate 5 avatars, one for each awareness level from Eugene Schwartz:
+ 
+- Most Aware: Customers who know your product and only need to know the deal
+- Product Aware: Customers who know what you sell but aren't sure it's right for them
+- Solution Aware: Customers who know the result they want but not that your product provides it
+- Problem Aware: Customers who know they have a problem but don't know there's a solution
+- Completely Unaware: Customers who don't know they have a problem that needs solving
+ 
+Each avatar should include:
+ 
+Awareness Level: (one of the five levels above)
+Name + Demographic Sketch: (age range, life stage, tone of voice)
+Emotional State: (how they feel about their situation)
+Internal Beliefs: (what they believe about products like this)
+Current Behaviors: (what they're doing now to fix the problem)
+Key Frustration: (what's not working for them)
+Desired Transformation: (what outcome they want emotionally or practically)
+Trigger Phrase: (a thought or line that shows their mindset)
+Hook That Would Work: (a message or ad idea that would immediately resonate)
+Voice-of-Customer Quote: (a direct or paraphrased line from a real review that represents their thinking)
+
+Make sure these personas are drawn directly from patterns identified in the reviews and reflect real customer segments.`;
+
+  console.time("customer-personas-generation-time");
+  const model = openai("gpt-4o-mini");
+  
+  const { object } = await generateObject({
+    model,
+    schema: customerPersonasSchema,
+    schemaName: "CustomerPersonasInsights",
+    schemaDescription: "Structured customer personas based on Eugene Schwartz's awareness levels",
+    prompt,
+    temperature: 0.4,
+    maxTokens: 1500,
+  });
+  
+  console.timeEnd("customer-personas-generation-time");
+  console.log("Successfully generated customer personas insights");
   
   return object;
 }
@@ -455,18 +525,20 @@ Content: ${review.review_text || 'No content'}
       customerFeedbackInsights,
       objectionHandlingInsights,
       customerJourneyInsights,
-      marketingCopyInsights
+      marketingCopyInsights,
+      customerPersonasInsights
     ] = await Promise.all([
       generateCustomerFeedbackInsights(product.name, reviewsText),
       generateObjectionHandlingInsights(product.name, reviewsText),
       generateCustomerJourneyInsights(product.name, reviewsText),
-      generateMarketingCopyInsights(product.name, reviewsText)
+      generateMarketingCopyInsights(product.name, reviewsText),
+      generateCustomerPersonasInsights(product.name, reviewsText)
     ]);
     
     console.timeEnd("parallel-ai-generation-time");
     console.log("Successfully generated all insights in parallel");
     
-    // Combine insights from all four generators
+    // Combine insights from all generators
     const insights = {
       // Customer feedback insights
       benefits: customerFeedbackInsights.benefits,
@@ -481,8 +553,10 @@ Content: ${review.review_text || 'No content'}
       // Customer journey insights
       failedSolutions: customerJourneyInsights.failedSolutions,
       emotionalTriggers: customerJourneyInsights.emotionalTriggers,
-      customerPersonas: customerJourneyInsights.customerPersonas,
       triggerEvents: customerJourneyInsights.triggerEvents,
+      
+      // Customer personas
+      customerPersonas: customerPersonasInsights.customerPersonas,
       
       // Marketing copy insights
       headlines: marketingCopyInsights.headlines,
@@ -591,15 +665,29 @@ function migrateInsightsSchema(insights: any) {
     migrated.painPoints = [];
   }
   
-  // Make sure customerPersonas have complaints field
+  // Make sure customerPersonas have the new fields
   if (migrated.customerPersonas) {
     migrated.customerPersonas = migrated.customerPersonas.map((persona: any) => {
-      if (!persona.complaints) {
-        // Try to use painPoints if available, otherwise empty array
-        persona.complaints = persona.painPoints || [];
+      // For legacy personas, convert to new format
+      if (!persona.awarenessLevel) {
+        return {
+          awarenessLevel: "Problem Aware", // Default to Problem Aware
+          name: persona.name || "Unknown",
+          demographicSketch: "Based on previous data",
+          emotionalState: "Not specified",
+          internalBeliefs: "Not specified",
+          currentBehaviors: "Not specified",
+          keyFrustration: persona.painPoints?.[0] || "Not specified",
+          desiredTransformation: "Not specified",
+          triggerPhrase: "Not specified",
+          hookThatWouldWork: "Not specified",
+          voiceOfCustomerQuote: "Not specified"
+        };
       }
       return persona;
     });
+  } else {
+    migrated.customerPersonas = [];
   }
   
   return migrated;
