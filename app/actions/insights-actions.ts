@@ -5,25 +5,39 @@ import { z } from "zod";
 import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
 
-// Define schema for the insights result
-const insightsSchema = z.object({
+// Split the schema into 4 separate schemas for parallel processing
+
+// Schema 1: Customer Feedback Schema (benefits, complaints, valued features)
+const customerFeedbackSchema = z.object({
   benefits: z.array(z.object({
     benefit: z.string().describe("A clear benefit that customers get from the product"),
     frequency: z.number().describe("Number indicating how frequently this benefit was mentioned"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this benefit"))
   })),
-  painPoints: z.array(z.object({
-    painPoint: z.string().describe("A pain point customers had before using the product"),
-    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this pain point"))
+  complaints: z.array(z.object({
+    complaint: z.string().describe("A complaint customers had about the product"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this complaint"))
   })),
   valuedFeatures: z.array(z.object({
     feature: z.string().describe("A feature of the product that customers value"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this feature"))
-  })),
+  }))
+});
+
+// Schema 2: Objection Handling Schema (prior objections, objection responses)
+const objectionHandlingSchema = z.object({
   priorObjections: z.array(z.object({
     objection: z.string().describe("An objection customers had before purchasing"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this objection"))
   })),
+  objectionResponses: z.array(z.object({
+    objection: z.string().describe("A common objection to purchasing"),
+    response: z.string().describe("Effective response to overcome this objection")
+  }))
+});
+
+// Schema 3: Customer Journey Schema (failed solutions, emotional triggers, customer personas, trigger events)
+const customerJourneySchema = z.object({
   failedSolutions: z.array(z.object({
     solution: z.string().describe("A solution customers tried before that failed"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this failed solution"))
@@ -36,23 +50,237 @@ const insightsSchema = z.object({
     name: z.string().describe("A descriptive name for this customer persona"),
     description: z.string().describe("Brief description of this customer persona"),
     needs: z.array(z.string().describe("Specific needs of this customer persona")),
-    painPoints: z.array(z.string().describe("Specific pain points of this customer persona"))
+    complaints: z.array(z.string().describe("Specific complaints of this customer persona"))
   })),
+  triggerEvents: z.array(z.string().describe("Events that trigger the need for this product"))
+});
+
+// Schema 4: Marketing Copy Schema (headlines, competitive positioning, hooks)
+const marketingCopySchema = z.object({
   headlines: z.array(z.string().describe("Ready-to-use marketing headline")),
   competitivePositioning: z.array(z.object({
     angle: z.string().describe("A competitive positioning angle"),
     explanation: z.string().describe("Explanation of why this positioning would be effective")
   })),
-  triggerEvents: z.array(z.string().describe("Events that trigger the need for this product")),
-  objectionResponses: z.array(z.object({
-    objection: z.string().describe("A common objection to purchasing"),
-    response: z.string().describe("Effective response to overcome this objection")
-  })),
   hooks: z.array(z.string().describe("One-liner hook for marketing copy"))
 });
 
+// Define complete schema for combining results and maintaining backward compatibility
+const insightsSchema = z.object({
+  benefits: z.array(z.object({
+    benefit: z.string(),
+    frequency: z.number(),
+    examples: z.array(z.string())
+  })),
+  complaints: z.array(z.object({
+    complaint: z.string(),
+    examples: z.array(z.string())
+  })),
+  valuedFeatures: z.array(z.object({
+    feature: z.string(),
+    examples: z.array(z.string())
+  })),
+  priorObjections: z.array(z.object({
+    objection: z.string(),
+    examples: z.array(z.string())
+  })),
+  failedSolutions: z.array(z.object({
+    solution: z.string(),
+    examples: z.array(z.string())
+  })),
+  emotionalTriggers: z.array(z.object({
+    trigger: z.string(),
+    examples: z.array(z.string())
+  })),
+  customerPersonas: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    needs: z.array(z.string()),
+    complaints: z.array(z.string())
+  })),
+  headlines: z.array(z.string()),
+  competitivePositioning: z.array(z.object({
+    angle: z.string(),
+    explanation: z.string()
+  })),
+  triggerEvents: z.array(z.string()),
+  objectionResponses: z.array(z.object({
+    objection: z.string(),
+    response: z.string()
+  })),
+  hooks: z.array(z.string())
+});
+
+// Type definition for reviews
+type ReviewSource = {
+  id: string;
+  product_source: string;
+  source: string;
+  source_id: string;
+  review_text: string;
+  review_title?: string;
+  rating: number;
+  review_date?: string;
+  reviewer_name?: string;
+  verified?: boolean;
+  source_data?: any;
+  created_at?: string;
+};
+
 /**
- * Generates marketing insights for a product using AI SDK
+ * Generate customer feedback insights (benefits, complaints, valued features)
+ */
+async function generateCustomerFeedbackInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate customer feedback insights.
+
+PRODUCT NAME: ${productName}
+
+REVIEWS:
+${reviewsText}
+
+Based on these reviews, generate structured insights for:
+1. Benefits ranked by frequency (with example quotes)
+2. Complaints customers had about the product (with example quotes)
+3. Features they value most (with example quotes)
+
+Ensure all insights are data-driven and based on patterns found in the reviews.
+For each insight, include at least 2-3 direct quotes from reviews as examples.`;
+
+  console.time("customer-feedback-generation-time");
+  const model = openai("gpt-4o-mini");
+  
+  const { object } = await generateObject({
+    model,
+    schema: customerFeedbackSchema,
+    schemaName: "CustomerFeedbackInsights",
+    schemaDescription: "Structured customer feedback insights derived from product reviews",
+    prompt,
+    temperature: 0.2,
+    maxTokens: 1500,
+  });
+  
+  console.timeEnd("customer-feedback-generation-time");
+  console.log("Successfully generated customer feedback insights");
+  
+  return object;
+}
+
+/**
+ * Generate objection handling insights (prior objections, objection responses)
+ */
+async function generateObjectionHandlingInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate objection handling insights.
+
+PRODUCT NAME: ${productName}
+
+REVIEWS:
+${reviewsText}
+
+Based on these reviews, generate structured insights for:
+1. Prior objections customers had before purchasing (with example quotes)
+2. Effective responses to common objections customers might have
+
+Ensure all insights are data-driven and based on patterns found in the reviews.
+For prior objections, include at least 2-3 direct quotes from reviews as examples.`;
+
+  console.time("objection-handling-generation-time");
+  const model = openai("gpt-4o-mini");
+  
+  const { object } = await generateObject({
+    model,
+    schema: objectionHandlingSchema,
+    schemaName: "ObjectionHandlingInsights",
+    schemaDescription: "Structured objection handling insights derived from product reviews",
+    prompt,
+    temperature: 0.3,
+    maxTokens: 1000,
+  });
+  
+  console.timeEnd("objection-handling-generation-time");
+  console.log("Successfully generated objection handling insights");
+  
+  return object;
+}
+
+/**
+ * Generate customer journey insights (failed solutions, emotional triggers, personas, trigger events)
+ */
+async function generateCustomerJourneyInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate customer journey insights.
+
+PRODUCT NAME: ${productName}
+
+REVIEWS:
+${reviewsText}
+
+Based on these reviews, generate structured insights for:
+1. Failed solutions customers tried before (with example quotes)
+2. Emotional triggers driving purchase decisions (with example quotes)
+3. 5 distinct customer personas that represent different segments of users
+4. Specific trigger events that lead customers to need this product
+
+Ensure all insights are data-driven and based on patterns found in the reviews.
+For failed solutions and emotional triggers, include at least 2-3 direct quotes from reviews as examples.`;
+
+  console.time("customer-journey-generation-time");
+  const model = openai("gpt-4o-mini");
+  
+  const { object } = await generateObject({
+    model,
+    schema: customerJourneySchema,
+    schemaName: "CustomerJourneyInsights",
+    schemaDescription: "Structured customer journey insights derived from product reviews",
+    prompt,
+    temperature: 0.4,
+    maxTokens: 1500,
+  });
+  
+  console.timeEnd("customer-journey-generation-time");
+  console.log("Successfully generated customer journey insights");
+  
+  return object;
+}
+
+/**
+ * Generate marketing copy insights (headlines, competitive positioning, hooks)
+ */
+async function generateMarketingCopyInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate marketing copy insights.
+
+PRODUCT NAME: ${productName}
+
+REVIEWS:
+${reviewsText}
+
+Based on these reviews, generate structured insights for:
+1. Ready-to-use marketing headlines that would resonate with customers
+2. Competitive positioning angles with explanations
+3. One-liner hooks for marketing copy that capture attention
+
+Ensure all insights are data-driven and based on patterns found in the reviews.
+Make them compelling, specific to this product, and based on actual customer language.`;
+
+  console.time("marketing-copy-generation-time");
+  const model = openai("gpt-4o-mini");
+  
+  const { object } = await generateObject({
+    model,
+    schema: marketingCopySchema,
+    schemaName: "MarketingCopyInsights",
+    schemaDescription: "Structured marketing copy insights derived from product reviews",
+    prompt,
+    temperature: 0.5, // Higher temperature for more creative marketing copy
+    maxTokens: 1000,
+  });
+  
+  console.timeEnd("marketing-copy-generation-time");
+  console.log("Successfully generated marketing copy insights");
+  
+  return object;
+}
+
+/**
+ * Generates marketing insights for a product using AI SDK with parallel processing
  * @param productId The ID of the product to generate insights for
  * @param useCache If true, use cached insights when available (default: false - always generate new)
  */
@@ -95,22 +323,6 @@ export async function generateProductInsights(productId: string, useCache: boole
     const amazonAsin = product.metadata?.amazon_asin;
     
     // Collect all reviews from different sources
-    // Define a type for the reviews based on the review_sources table structure
-    type ReviewSource = {
-      id: string;
-      product_source: string;
-      source: string;
-      source_id: string;
-      review_text: string;
-      review_title?: string;
-      rating: number;
-      review_date?: string;
-      reviewer_name?: string;
-      verified?: boolean;
-      source_data?: any;
-      created_at?: string;
-    };
-    
     let allReviews: ReviewSource[] = [];
     
     console.log("Fetching reviews from review_sources table...");
@@ -225,52 +437,50 @@ Content: ${review.review_text || 'No content'}
 ---`;
     }).join('\n\n');
     
-    // Define the prompt for generating insights
-    const prompt = `As an expert marketing analyst, analyze these product reviews and generate comprehensive marketing insights.
-
-PRODUCT NAME: ${product.name}
-
-REVIEWS:
-${reviewsText}
-
-Based on these reviews, generate structured marketing insights in these categories:
-1. Benefits ranked by frequency (with example quotes)
-2. Pain points customers had before (with example quotes)
-3. Features they value most (with example quotes)
-4. Prior objections they overcame (with example quotes)
-5. Failed solutions they tried first (with example quotes)
-6. Emotional triggers driving purchases (with example quotes)
-7. 5 distinct customer personas
-8. Ready-to-use static headlines
-9. Competitive positioning angles
-10. Specific trigger events
-11. Responses to common objections
-12. One-liners for hooks
-
-Ensure all insights are data-driven and based on patterns found in the reviews.
-For each insight that requires examples, include at least 2-3 direct quotes from reviews.`;
+    // Use Promise.all to generate insights in parallel
+    console.log("Generating insights in parallel with AI SDK...");
+    console.time("parallel-ai-generation-time");
     
-    // Use AI SDK's generateObject with timing
-    console.log("Generating insights with AI SDK...");
-    console.time("ai-sdk-generation-time");
+    // Run all four insight generators in parallel
+    const [
+      customerFeedbackInsights,
+      objectionHandlingInsights,
+      customerJourneyInsights,
+      marketingCopyInsights
+    ] = await Promise.all([
+      generateCustomerFeedbackInsights(product.name, reviewsText),
+      generateObjectionHandlingInsights(product.name, reviewsText),
+      generateCustomerJourneyInsights(product.name, reviewsText),
+      generateMarketingCopyInsights(product.name, reviewsText)
+    ]);
     
-    // Configure the OpenAI model
-    const model = openai("gpt-4o-mini");
+    console.timeEnd("parallel-ai-generation-time");
+    console.log("Successfully generated all insights in parallel");
     
-    const { object: insights } = await generateObject({
-      model,
-      schema: insightsSchema,
-      schemaName: "ProductInsights",
-      schemaDescription: "Structured marketing insights derived from product reviews",
-      prompt,
-      temperature: 0.3, // Slightly higher for more creative marketing insights
-      maxTokens: 4000, // Set a reasonable token limit for the response
-    });
+    // Combine insights from all four generators
+    const insights = {
+      // Customer feedback insights
+      benefits: customerFeedbackInsights.benefits,
+      complaints: customerFeedbackInsights.complaints,
+      valuedFeatures: customerFeedbackInsights.valuedFeatures,
+      
+      // Objection handling insights
+      priorObjections: objectionHandlingInsights.priorObjections,
+      objectionResponses: objectionHandlingInsights.objectionResponses,
+      
+      // Customer journey insights
+      failedSolutions: customerJourneyInsights.failedSolutions,
+      emotionalTriggers: customerJourneyInsights.emotionalTriggers,
+      customerPersonas: customerJourneyInsights.customerPersonas,
+      triggerEvents: customerJourneyInsights.triggerEvents,
+      
+      // Marketing copy insights
+      headlines: marketingCopyInsights.headlines,
+      competitivePositioning: marketingCopyInsights.competitivePositioning,
+      hooks: marketingCopyInsights.hooks
+    };
     
-    console.timeEnd("ai-sdk-generation-time");
-    console.log("Successfully generated insights with AI SDK");
-    
-    // Store the insights
+    // Store the combined insights
     const { error: insertError } = await supabase
       .from("products")
       .update({

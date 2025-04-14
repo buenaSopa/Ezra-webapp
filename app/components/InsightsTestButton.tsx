@@ -155,7 +155,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
               </TabsList>
             </div>
             
-            {/* Tab 1: Customer Needs & Pain Points */}
+            {/* Tab 1: Customer Needs & Complaints */}
             <TabsContent value="customer-needs" className="px-6 py-4">
               <div className="p-3 rounded-lg">
                 <div className="flex space-x-2 overflow-x-auto pb-2">
@@ -167,9 +167,9 @@ export default function InsightsTestButton({ productId }: { productId: string })
                     Benefits
                   </Button>
                   <Button 
-                    variant={activeSubTab['customer-needs'] === 'pain-points' ? "default" : "outline"} 
+                    variant={activeSubTab['customer-needs'] === 'complaints' ? "default" : "outline"} 
                     size="sm"
-                    onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'pain-points'})}
+                    onClick={() => setActiveSubTab({...activeSubTab, 'customer-needs': 'complaints'})}
                   >
                     Complaints
                   </Button>
@@ -200,12 +200,12 @@ export default function InsightsTestButton({ productId }: { productId: string })
                 </div>
               )}
 
-              {/* Pain Points */}
-              {activeSubTab['customer-needs'] === 'pain-points' && (
+              {/* Complaints */}
+              {activeSubTab['customer-needs'] === 'complaints' && (
                 <div>
                   <h2 className="text-xl font-bold mb-4 pb-2 border-b">Complaints</h2>
                   <div className="divide-y">
-                    {renderQuotesList(result.insights.painPoints, 'painPoint')}
+                    {renderQuotesList(result.insights.complaints, 'complaint')}
                   </div>
                 </div>
               )}
@@ -250,10 +250,10 @@ export default function InsightsTestButton({ productId }: { productId: string })
                     </div>
                     
                     <div>
-                      <h4 className="text-sm font-semibold mb-1">Pain Points:</h4>
+                      <h4 className="text-sm font-semibold mb-1">Complaints:</h4>
                       <ul className="list-disc pl-5 text-sm space-y-1">
-                        {persona.painPoints.map((pain: string, i: number) => (
-                          <li key={i}>{pain}</li>
+                        {persona.complaints.map((complaint: string, i: number) => (
+                          <li key={i}>{complaint}</li>
                         ))}
                       </ul>
                     </div>
