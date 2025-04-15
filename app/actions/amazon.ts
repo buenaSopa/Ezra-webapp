@@ -4,6 +4,73 @@ import { ApifyClient } from 'apify-client';
 import { createClient } from '@/app/utils/supabase/server';
 import { parseReviewDate } from '@/lib/utils';
 
+// Define Amazon marketplace domains and their corresponding country names
+const AMAZON_MARKETPLACES = [
+	{ domain: 'amazon.com', country: 'United States' },
+	{ domain: 'amazon.co.uk', country: 'United Kingdom' },
+	{ domain: 'amazon.ca', country: 'Canada' },
+	{ domain: 'amazon.fr', country: 'France' },
+	{ domain: 'amazon.de', country: 'Germany (Deutschland)' },
+	{ domain: 'amazon.it', country: 'Italy (Italia)' }
+];
+
+/**
+ * Checks which Amazon marketplace an ASIN is available in
+ * @param asin The Amazon ASIN to check
+ * @returns The marketplace country where the ASIN is available, or null if not found
+ */
+async function checkAsinAvailability(asin: string) {
+	try {
+		// Create an array of promises for GET requests to each marketplace
+		const checkPromises = AMAZON_MARKETPLACES.map(async (marketplace) => {
+			const url = `https://www.${marketplace.domain}/dp/${asin}`;
+			
+			try {
+				// Use fetch with GET method to check URL availability
+				const response = await fetch(url, { 
+					method: 'GET',
+					headers: {
+						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+						'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+						'Accept-Language': 'en-US,en;q=0.9',
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache'
+					},
+				});
+				
+				console.log(`Response status for ${marketplace.domain}: ${response.status} ${response.statusText}`);
+
+				// Check if status is 200 (OK) or 301/302 (redirected to product)
+				if (response.ok || response.status === 301 || response.status === 302) {
+					// For more accurate detection, we could check the response body for product-specific content
+					// But for now, a successful status code is sufficient
+					console.log(`ASIN ${asin} is available on ${marketplace.domain}`);
+					return marketplace.country;
+				}
+			} catch (error) {
+				console.log(`Error checking ${marketplace.domain} for ASIN ${asin}:`, error);
+			}
+			
+			return null;
+		});
+		
+		// Run all checks in parallel and get the first successful result
+		const results = await Promise.all(checkPromises);
+		const availableCountry = results.find(result => result !== null);
+		
+		if (availableCountry) {
+			console.log(`ASIN ${asin} is available in ${availableCountry}`);
+			return availableCountry;
+		}
+		
+		console.log(`ASIN ${asin} not found in any checked marketplace`);
+		return 'United States'; // Default to US if no match found
+	} catch (error) {
+		console.error('Error checking ASIN availability:', error);
+		return 'United States'; // Default to US on error
+	}
+}
+
 /**
  * Server action to fetch Amazon reviews for a product
  * @param asin The Amazon ASIN of the product to fetch reviews for
@@ -45,6 +112,10 @@ export async function getAmazonReviews(
 			};
 		}
 
+		// Check which marketplace the ASIN is available in
+		const country = await checkAsinAvailability(trimmedAsin);
+		console.log(`Using country ${country} for ASIN ${trimmedAsin}`);
+
 		// Prepare the input for the scraping task
 		const input = {
 			"ASIN_or_URL": [trimmedAsin],
@@ -63,6 +134,7 @@ export async function getAmazonReviews(
 				"two_star",
 				"one_star"
 			],
+			"country": country,
 			"Proxy configuration": {
 				"useApifyProxy": false
 			}
@@ -82,11 +154,11 @@ export async function getAmazonReviews(
 			})
 			.eq('id', jobResult.jobId);
 
-		console.log(`Started Amazon review scrape for ASIN: ${trimmedAsin}. Run ID: ${runInfo.id}`);
+		console.log(`Started Amazon review scrape for ASIN: ${trimmedAsin} in ${country}. Run ID: ${runInfo.id}`);
 
 		return {
 			success: true,
-			message: `Amazon review scraping initiated for ASIN ${trimmedAsin}.`,
+			message: `Amazon review scraping initiated for ASIN ${trimmedAsin} in ${country}.`,
 			runId: runInfo.id,
 			jobId: jobResult.jobId
 		};
