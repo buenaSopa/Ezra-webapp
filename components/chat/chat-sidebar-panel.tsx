@@ -87,14 +87,14 @@ export function ChatSidebarPanel({
 
   return (
     <div className={`w-full lg:w-72 border-l bg-gray-50/50 flex flex-col ${className || ''}`}>
-      <Tabs defaultValue="insights" className="flex flex-col h-full">
+      <Tabs defaultValue="prompts" className="flex flex-col h-full">
         <TabsList className="p-2 bg-transparent border-b rounded-none justify-center">
           <TabsTrigger 
             value="insights" 
             className="flex items-center gap-1.5 data-[state=active]:bg-white"
             onClick={() => {
               // Fetch insights data if not already loaded when clicking the tab
-              if (!insightsData && !insightsLoading && !isGenerating) {
+              if (!insightsData && !isGenerating) {
                 fetchInsights();
               }
             }}
