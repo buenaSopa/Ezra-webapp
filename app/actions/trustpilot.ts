@@ -74,7 +74,7 @@ export async function startTrustpilotReviewScraping(companyWebsite: string, prod
 			"sortBy": "recency",
 			"filterByStarRating": "",
 			"filterByLanguage": "all",
-			"filterByVerified": true,
+			"filterByVerified": false,
 			"filterByCountryOfReviewers": "",
 			"startFromPageNumber": 1,
 			"endAtPageNumber": 20,
