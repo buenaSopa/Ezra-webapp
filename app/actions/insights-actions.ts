@@ -6,15 +6,23 @@ import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { createRetrieverForDocumentResources } from "@/lib/chat-engine";
 
-// Split the schema into 4 separate schemas for parallel processing
+// Split the schema into 5 separate schemas for parallel processing
 
-// Schema 1: Customer Feedback Schema (benefits, complaints, valued features)
-const customerFeedbackSchema = z.object({
+// Schema 1a: Positive Customer Feedback Schema (benefits, valued features)
+const positiveCustomerFeedbackSchema = z.object({
   benefits: z.array(z.object({
     benefit: z.string().describe("A clear benefit that customers get from the product"),
     frequency: z.number().describe("Number indicating how frequently this benefit was mentioned"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this benefit"))
   })),
+  valuedFeatures: z.array(z.object({
+    feature: z.string().describe("A feature of the product that customers value"),
+    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this feature"))
+  }))
+});
+
+// Schema 1b: Negative Customer Feedback Schema (complaints, pain points)
+const negativeCustomerFeedbackSchema = z.object({
   complaints: z.array(z.object({
     complaint: z.string().describe("A complaint customers had about the product"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this complaint"))
@@ -22,10 +30,6 @@ const customerFeedbackSchema = z.object({
   painPoints: z.array(z.object({
     painPoint: z.string().describe("A pain point or problem customers faced before using the product"),
     examples: z.array(z.string().describe("Direct quotes from reviews mentioning this pre-purchase pain point"))
-  })),
-  valuedFeatures: z.array(z.object({
-    feature: z.string().describe("A feature of the product that customers value"),
-    examples: z.array(z.string().describe("Direct quotes from reviews mentioning this feature"))
   }))
 });
 
@@ -155,10 +159,10 @@ type ReviewSource = {
 };
 
 /**
- * Generate customer feedback insights (benefits, complaints, valued features)
+ * Generate positive customer feedback insights (benefits, valued features)
  */
-async function generateCustomerFeedbackInsights(productName: string, reviewsText: string) {
-  const prompt = `As an expert marketing analyst, analyze these product reviews and generate customer feedback insights.
+async function generatePositiveCustomerFeedbackInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate positive customer feedback insights.
 
 PRODUCT NAME: ${productName}
 
@@ -167,28 +171,63 @@ ${reviewsText}
 
 Based on these reviews, generate structured insights for:
 1. Benefits ranked by frequency (with example quotes)
-2. Complaints customers had about the product (with example quotes)
-3. Pain points that customers faced before using this product (with example quotes)
-4. Features they value most (with example quotes)
+2. Features they value most (with example quotes)
 
 Ensure all insights are data-driven and based on patterns found in the reviews.
 For each insight, include at least 2-3 direct quotes from reviews as examples.`;
 
-  console.time("customer-feedback-generation-time");
+  console.time("positive-customer-feedback-generation-time");
   const model = openai("gpt-4o-mini");
   
   const { object } = await generateObject({
     model,
-    schema: customerFeedbackSchema,
-    schemaName: "CustomerFeedbackInsights",
-    schemaDescription: "Structured customer feedback insights derived from product reviews",
+    schema: positiveCustomerFeedbackSchema,
+    schemaName: "PositiveCustomerFeedbackInsights",
+    schemaDescription: "Structured positive customer feedback insights derived from product reviews",
     prompt,
     temperature: 0.2,
     maxTokens: 1500,
   });
   
-  console.timeEnd("customer-feedback-generation-time");
-  console.log("Successfully generated customer feedback insights");
+  console.timeEnd("positive-customer-feedback-generation-time");
+  console.log("Successfully generated positive customer feedback insights");
+  
+  return object;
+}
+
+/**
+ * Generate negative customer feedback insights (complaints, pain points)
+ */
+async function generateNegativeCustomerFeedbackInsights(productName: string, reviewsText: string) {
+  const prompt = `As an expert marketing analyst, analyze these product reviews and generate negative customer feedback insights.
+
+PRODUCT NAME: ${productName}
+
+REVIEWS:
+${reviewsText}
+
+Based on these reviews, generate structured insights for:
+1. Complaints customers had about the product (with example quotes)
+2. Pain points that customers faced before using this product (with example quotes)
+
+Ensure all insights are data-driven and based on patterns found in the reviews.
+For each insight, include at least 2-3 direct quotes from reviews as examples.`;
+
+  console.time("negative-customer-feedback-generation-time");
+  const model = openai("gpt-4o-mini");
+  
+  const { object } = await generateObject({
+    model,
+    schema: negativeCustomerFeedbackSchema,
+    schemaName: "NegativeCustomerFeedbackInsights",
+    schemaDescription: "Structured negative customer feedback insights derived from product reviews",
+    prompt,
+    temperature: 0.2,
+    maxTokens: 1500,
+  });
+  
+  console.timeEnd("negative-customer-feedback-generation-time");
+  console.log("Successfully generated negative customer feedback insights");
   
   return object;
 }
@@ -345,11 +384,11 @@ Choose 5 different headline structures from the following proven direct response
  - The Fastest Way to [outcome]
  - Make [activity] Easy Again
  1. Curiosity + Emotion
- - What Most People Don’t Know About [topic]
+ - What Most People Don't Know About [topic]
  - Is This the Fix for [problem]?
  - What Changed Everything for Mealtime
  1. Fear/Guilt
- - Don’t Use [risky alternative]
+ - Don't Use [risky alternative]
  - Still Using [wrong product]?
  - Could This Be Hurting Your [child/baby]?
  1. Reason Why / List Format
@@ -361,7 +400,7 @@ Choose 5 different headline structures from the following proven direct response
  - Start [activity] Smarter
  - Fix [problem] Now
  1. Testimonial / Transformation
- - “Finally, No More [frustration]”
+ - "Finally, No More [frustration]"
  - The Set I Wish I Had from Day One
  - What Made Mealtimes Actually Enjoyable
 Headlines must:
@@ -390,12 +429,12 @@ What emotion is most common: guilt, relief, excitement, overwhelm?
 Step 2: Choose hook angles that align with review language and customer awareness
 Hooks should fall into one or more of the following categories:
 Problem-first (frustration, overwhelm, mess, confusion)
-Emotion-first (guilt, relief, pride, fear, “am I doing this right?”)
-Testimonial-style (“I didn’t expect this to work but…”)
-Unexpected claim (“This cup replaced everything”)
-Curiosity trigger (“Most parents don’t realize this…”)
-Mistake-based (“You’re probably doing this wrong”)
-Visual set-up (“Here’s what feeding used to look like”)
+Emotion-first (guilt, relief, pride, fear, "am I doing this right?")
+Testimonial-style ("I didn't expect this to work but...")
+Unexpected claim ("This cup replaced everything")
+Curiosity trigger ("Most parents don't realize this...")
+Mistake-based ("You're probably doing this wrong")
+Visual set-up ("Here's what feeding used to look like")
 
 Step 3: Write 5 hooks that are:
 1 sentence each (ideally under 20 words)
@@ -610,15 +649,17 @@ export async function generateProductInsights(productId: string, useCache: boole
     console.log("Generating insights in parallel with AI SDK...");
     console.time("parallel-ai-generation-time");
     
-    // Run all four insight generators in parallel
+    // Run all insight generators in parallel
     const [
-      customerFeedbackInsights,
+      positiveCustomerFeedbackInsights,
+      negativeCustomerFeedbackInsights,
       objectionHandlingInsights,
       customerJourneyInsights,
       marketingCopyInsights,
       customerPersonasInsights
     ] = await Promise.all([
-      generateCustomerFeedbackInsights(product.name, reviewsText),
+      generatePositiveCustomerFeedbackInsights(product.name, reviewsText),
+      generateNegativeCustomerFeedbackInsights(product.name, reviewsText),
       generateObjectionHandlingInsights(product.name, reviewsText),
       generateCustomerJourneyInsights(product.name, reviewsText),
       generateMarketingCopyInsights(product.name, reviewsText),
@@ -630,11 +671,13 @@ export async function generateProductInsights(productId: string, useCache: boole
     
     // Combine insights from all generators
     const insights = {
-      // Customer feedback insights
-      benefits: customerFeedbackInsights.benefits,
-      complaints: customerFeedbackInsights.complaints,
-      painPoints: customerFeedbackInsights.painPoints,
-      valuedFeatures: customerFeedbackInsights.valuedFeatures,
+      // Positive customer feedback insights
+      benefits: positiveCustomerFeedbackInsights.benefits,
+      valuedFeatures: positiveCustomerFeedbackInsights.valuedFeatures,
+      
+      // Negative customer feedback insights
+      complaints: negativeCustomerFeedbackInsights.complaints,
+      painPoints: negativeCustomerFeedbackInsights.painPoints,
       
       // Objection handling insights
       priorObjections: objectionHandlingInsights.priorObjections,
