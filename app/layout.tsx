@@ -7,7 +7,7 @@ const NextNProgressClient = dynamic(() => import('@/app/components/NextNProgress
 
 
 export const metadata = {
-  title: "Ezra - AI Powered Marketing Assistant",
+  title: "Ezra - AI Creative Strategist for Winning Ads",
   description: "AI-powered tool for creative strategists to streamline research, ideation, and ad script creation",
 };
 
