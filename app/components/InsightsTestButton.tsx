@@ -106,7 +106,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
       <CardHeader className="border-b">
         <div className="flex justify-between items-center">
           <CardTitle className="text-xl">
-            AI Marketing Insights
+          AI Audience Insights
           </CardTitle>
           <Button 
             onClick={handleGenerateInsights} 
@@ -152,9 +152,9 @@ export default function InsightsTestButton({ productId }: { productId: string })
           <Tabs defaultValue="customer-needs" className="w-full">
             <div className="border-b px-6 py-2">
               <TabsList className="grid grid-cols-3">
-                <TabsTrigger value="customer-needs" className="text-sm">Customer Needs</TabsTrigger>
-                <TabsTrigger value="customer-personas" className="text-sm">Customer Personas</TabsTrigger>
-                <TabsTrigger value="marketing-assets" className="text-sm">Marketing Assets</TabsTrigger>
+                <TabsTrigger value="customer-needs" className="text-sm">Audience Insights</TabsTrigger>
+                <TabsTrigger value="customer-personas" className="text-sm">Audience Avatars</TabsTrigger>
+                <TabsTrigger value="marketing-assets" className="text-sm">Ad Ideas</TabsTrigger>
                 {/* <TabsTrigger value="competitive-edge" className="text-sm">Competitive Edge</TabsTrigger> */}
               </TabsList>
             </div>
@@ -314,7 +314,7 @@ export default function InsightsTestButton({ productId }: { productId: string })
 
             {/* Tab 3: Marketing Assets */}
             <TabsContent value="marketing-assets" className="px-6 py-4 space-y-5">
-              <h2 className="text-xl font-bold mb-4 pb-2 border-b">Marketing Assets</h2>
+              <h2 className="text-xl font-bold mb-4 pb-2 border-b">Ad Ideas</h2>
               {/* Headlines */}
               <div>
                 <h2 className="text-lg font-semibold mb-3 pb-2 border-b">Headlines</h2>

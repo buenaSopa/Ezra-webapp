@@ -43,7 +43,7 @@ export async function RecentChats({ limit = 30 }: RecentChatsProps) {
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Recent Conversations</CardTitle>
+        <CardTitle>Recent Chats</CardTitle>
         <CardDescription>Continue where you left off</CardDescription>
       </CardHeader>
       <CardContent>

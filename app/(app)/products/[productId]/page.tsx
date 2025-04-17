@@ -1145,13 +1145,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div>
                   <h3 className="text-sm font-medium mb-0.5"
                       style={{color: hasRunningJobs ? '#1E40AF' : '#047857'}}>
-                    {(hasRunningJobs || isRefreshingReviews) ? 'Review scraping in progress (10 mins)' : 'Review scraping complete'}
+                    {(hasRunningJobs || isRefreshingReviews) ? 'Review scanning in progress (10 mins)' : 'Review scanning complete'}
                   </h3>
                   <p className="text-xs text-blue-600 dark:text-blue-400">
                     {(hasRunningJobs || isRefreshingReviews) ? (
                       <>Don't start a new chat yet - processing {allScrapingJobs.length} job{allScrapingJobs.length !== 1 ? 's' : ''}.</>
                     ) : (
-                      <>All review scraping jobs have completed.</>
+                      <>All review scanning jobs have completed.</>
                     )}
                   </p>
                 </div>
@@ -1175,7 +1175,7 @@ export default function ProductPage({ params }: ProductPageProps) {
               {allScrapingJobs.length > 0 && (
                 <div className="border border-blue-200 rounded-md overflow-hidden mb-3">
                   <div className="bg-blue-100 dark:bg-blue-900/50 px-3 py-1 text-blue-700 dark:text-blue-300 text-xs font-medium">
-                    {(hasRunningJobs || isRefreshingReviews) ? 'Current Scraping Jobs' : 'Previous Scraping Jobs'}
+                    {(hasRunningJobs || isRefreshingReviews) ? 'Current scanning Jobs' : 'Previous scanning Jobs'}
                   </div>
                   <div className="divide-y divide-blue-200">
                     {allScrapingJobs.map((job, index) => (

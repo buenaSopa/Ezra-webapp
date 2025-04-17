@@ -20,7 +20,7 @@ export default async function Dashboard() {
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-400">Welcome</span> {' '}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-500">to Ezra</span>
           </h1>
-          <p className="text-muted-foreground">Your AI-powered creative strategist for better marketing decisions</p>
+          <p className="text-muted-foreground">Your AI Creative Strategist for Winning Ads</p>
         </div>
         <RecentChats limit={5} />
       </div>
