@@ -74,7 +74,7 @@ export default async function Login({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
           <h1 className="text-2xl font-bold">Welcome to Ezra</h1>
@@ -114,7 +114,7 @@ export default async function Login({
             </div>
 
             <div className="space-y-2 pt-2">
-              <SubmitButton className="w-full bg-green-700 hover:bg-green-800 text-white rounded-md px-4 py-2 transition-colors">
+              <SubmitButton className="w-full hover:bg-green-800 text-white bg-primary rounded-md px-4 py-2 transition-colors">
                 Sign In
               </SubmitButton>
               <SubmitButton
