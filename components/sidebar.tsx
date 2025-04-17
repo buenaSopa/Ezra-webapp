@@ -68,7 +68,7 @@ export function Sidebar() {
       )}
 
       <ShadcnSidebar className="w-[250px] border-r">
-        <SidebarHeader className="border-b p-4 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
+        <SidebarHeader className="border-b p-4">
           <div className="flex items-center justify-between gap-2">
             <Link href="/dashboard">
               <span className="font-semibold cursor-pointer text-[#C11F60] text-xl">ezra</span>
@@ -79,7 +79,7 @@ export function Sidebar() {
           </div>
         </SidebarHeader>
         
-        <SidebarContent className="p-4 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
+        <SidebarContent className="p-4">
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -122,7 +122,7 @@ export function Sidebar() {
           </div>
         </SidebarContent>
 
-        <SidebarFooter className="border-t p-4 space-y-2 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
+        <SidebarFooter className="border-t p-4 space-y-2">
           <Link href="/settings">
             <Button variant="ghost" className="w-full justify-start">
               <Settings className="mr-2 h-4 w-4" />
