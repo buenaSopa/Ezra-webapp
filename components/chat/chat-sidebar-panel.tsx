@@ -106,8 +106,8 @@ export function ChatSidebarPanel({
             value="prompts" 
             className="flex items-center gap-1.5 data-[state=active]:bg-white"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Prompts</span>
+            <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">Prompts</span>
           </TabsTrigger>
         </TabsList>
         

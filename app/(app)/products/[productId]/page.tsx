@@ -1099,7 +1099,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   }
 
   return (
-    <div className="container max-w-6xl mx-auto p-6 h-full overflow-y-auto">
+    <div className="container max-w-6xl mx-auto p-6 h-full overflow-y-auto ">
       <Toaster position="top-right" />
       <ProductHeader
         product={product}

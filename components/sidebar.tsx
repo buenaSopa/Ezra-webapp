@@ -24,7 +24,7 @@ export function Sidebar() {
   return (
     <ShadcnSidebar className="w-[250px] border-r">
       <SidebarRail className="w-2 hover:bg-accent" />
-      <SidebarHeader className="border-b p-4">
+      <SidebarHeader className="border-b p-4 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
         <div className="flex items-center justify-between gap-2">
           <Link href="/dashboard">
             <span className="font-semibold cursor-pointer text-[#C11F60] text-xl">ezra</span>
@@ -35,13 +35,13 @@ export function Sidebar() {
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="p-4">
+      <SidebarContent className="p-4 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
         <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
               <Link href="/products" className="block">
                 <Button variant="ghost" className="w-full justify-start">
-                  <h2 className="text-sm font-semibold">Products</h2>
+                  <h2 className="text-base">Products</h2>
                 </Button>
               </Link>
               <AddProductIcon />
@@ -78,7 +78,7 @@ export function Sidebar() {
         </div>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4 space-y-2">
+      <SidebarFooter className="border-t p-4 space-y-2 bg-gradient-to-br from-[#f8f0fc] via-[#fef3e8] to-[#fce7ef]">
         <Link href="/settings">
           <Button variant="ghost" className="w-full justify-start">
             <Settings className="mr-2 h-4 w-4" />

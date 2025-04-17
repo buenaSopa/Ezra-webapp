@@ -55,8 +55,8 @@ export async function RecentChats({ limit = 30 }: RecentChatsProps) {
               className="flex items-center justify-between py-3 px-2 hover:bg-muted transition-colors rounded-md -mx-2"
             >
               <div className="flex items-center gap-3">
-                <div className="bg-primary/10 p-2 rounded-md">
-                  <MessageSquare className="h-5 w-5 text-primary" />
+                <div className="bg-[#C11F60]/10 p-2 rounded-md">
+                  <MessageSquare className="h-5 w-5 text-[#C11F60]" />
                 </div>
                 <div>
                   <p className="font-medium">{chat.title}</p>
