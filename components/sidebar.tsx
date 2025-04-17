@@ -27,7 +27,7 @@ export function Sidebar() {
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center justify-between gap-2">
           <Link href="/dashboard">
-            <span className="font-semibold cursor-pointer">Ezra</span>
+            <span className="font-semibold cursor-pointer text-[#C11F60] text-xl">ezra</span>
           </Link>
           <SidebarTrigger>
             <PanelLeftClose className="h-4 w-4" />
